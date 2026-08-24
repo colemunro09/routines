@@ -9,8 +9,11 @@ running log. Optional sync through Supabase keeps every device on the same list.
 ## Using it
 
 - Tap a row to check it off.
-- **Edit list** (bottom right) — rename, reorder, delete, and add habits; add or remove
-  whole sections; edit both quote lines. Tap **Done** to go back.
+- **Edit list** (bottom right) — rename, delete, and add habits; add or remove whole
+  sections; edit both quote lines. Tap **Done** to go back.
+- To reorder, drag a habit by the grip handle on its left. Drop it anywhere in either
+  section — dragging one from Morning into Evening moves it there. With a keyboard,
+  focus a handle and use the up and down arrow keys.
 - The bar chart at the bottom shows the last 14 days. The streak counts consecutive days
   at 100%; today only breaks it once the day is over.
 

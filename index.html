@@ -21,6 +21,7 @@
   --accent-soft:rgba(163,31,52,.10);
   --danger:#9A5B00;
   --shadow:0 1px 2px rgba(11,11,13,.06), 0 8px 24px -16px rgba(11,11,13,.30);
+  --lift:0 2px 6px rgba(11,11,13,.10), 0 16px 32px -14px rgba(11,11,13,.40);
   --r:14px;
   color-scheme:light dark;
 }
@@ -39,6 +40,7 @@
     --accent-soft:rgba(255,59,78,.15);
     --danger:#E8A33D;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.8);
+    --lift:0 2px 8px rgba(0,0,0,.5), 0 20px 40px -16px rgba(0,0,0,.9);
   }
 }
 :root[data-theme="light"]{ color-scheme:light; }
@@ -57,6 +59,7 @@
   --accent-soft:rgba(255,59,78,.15);
   --danger:#E8A33D;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.8);
+  --lift:0 2px 8px rgba(0,0,0,.5), 0 20px 40px -16px rgba(0,0,0,.9);
 }
 
 *{box-sizing:border-box}
@@ -347,6 +350,27 @@ h1{
 .mini.del:hover{color:var(--danger)}
 .mini svg{width:15px;height:15px}
 .mini[disabled]{opacity:.25;cursor:default}
+
+/* the grab handle, and the tile while it is off the ground */
+.grip{
+  flex:none;width:30px;height:38px;margin-left:-4px;
+  display:grid;place-items:center;
+  background:none;border:1px solid transparent;border-radius:8px;
+  color:var(--ink-3);cursor:grab;
+  touch-action:none;-webkit-user-select:none;user-select:none;
+}
+.grip:hover{color:var(--ink-2);background:var(--surface-2)}
+.grip svg{width:16px;height:16px;pointer-events:none}
+.erow.lift{
+  position:relative;z-index:5;
+  background:var(--surface);border-top-color:transparent;border-radius:12px;
+  box-shadow:var(--lift);
+}
+.erow.lift + .erow{border-top-color:transparent}
+.erow.lift .grip{color:var(--ink-2);cursor:grabbing;background:none}
+.sec .rows:empty{min-height:14px}
+body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
+body.dragging .erow input{pointer-events:none}
 .add{
   display:flex;align-items:center;gap:9px;width:100%;padding:12px 16px;
   border:0;border-top:1px dashed var(--line);background:none;cursor:pointer;
@@ -712,6 +736,7 @@ var ICON={
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>',
   up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></svg>',
   down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></svg>',
+  grip:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   right:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
   cloud:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .3-9A6 6 0 0 0 6.2 11 3.5 3.5 0 0 0 7 19Z"/></svg>',
@@ -826,7 +851,8 @@ function renderSections(){
     card.appendChild(head);
 
     var rows=document.createElement("div"); rows.className="rows";
-    sec.items.forEach(function(it,ii){ rows.appendChild(editing? editRow(sec,it,ii) : checkRow(it)); });
+    rows._sec=sec;   /* a dragged tile is filed back by the host it lands in */
+    sec.items.forEach(function(it){ rows.appendChild(editing? editRow(it) : checkRow(it)); });
     card.appendChild(rows);
 
     if(editing){
@@ -874,28 +900,185 @@ function checkRow(it){
   return b;
 }
 
-function editRow(sec,it,ii){
+function editRow(it){
   var r=document.createElement("div"); r.className="erow";
+  r._item=it;
+
+  var grip=document.createElement("button");
+  grip.className="grip"; grip.type="button"; grip.innerHTML=ICON.grip;
+  grip.title="Drag to reorder \u2014 or use the arrow keys";
+  grip.setAttribute("aria-label","Reorder "+(it.label||"this habit"));
+  grip.addEventListener("pointerdown",function(e){ startDrag(e,r); });
+  grip.addEventListener("dragstart",function(e){ e.preventDefault(); });
+  grip.addEventListener("keydown",function(e){
+    if(e.key==="ArrowUp"){ e.preventDefault(); nudge(it,-1); }
+    else if(e.key==="ArrowDown"){ e.preventDefault(); nudge(it,1); }
+  });
+  r.appendChild(grip);
+
   var inp=document.createElement("input");
   inp.value=it.label; inp.placeholder="New habit"; inp.setAttribute("aria-label","Habit name");
   inp.addEventListener("input",function(){ it.label=inp.value; save(); });
   r.appendChild(inp);
-  [["up",-1],["down",1]].forEach(function(m){
-    var btn=document.createElement("button");
-    btn.className="mini"; btn.type="button"; btn.innerHTML=ICON[m[0]];
-    btn.title=m[0]==="up"?"Move up":"Move down";
-    var j=ii+m[1];
-    if(j<0||j>=sec.items.length) btn.disabled=true;
-    btn.addEventListener("click",function(){
-      var tmp=sec.items[ii]; sec.items[ii]=sec.items[j]; sec.items[j]=tmp; save(); render();
-    });
-    r.appendChild(btn);
-  });
+
+  /* a row can be dragged into the other section, so its home is looked up
+     rather than closed over */
   var del=document.createElement("button");
   del.className="mini del"; del.type="button"; del.innerHTML=ICON.trash; del.title="Delete";
-  del.addEventListener("click",function(){ sec.items.splice(ii,1); save(); render(); });
+  del.addEventListener("click",function(){
+    var sec=sectionOf(it); if(!sec) return;
+    var i=sec.items.indexOf(it);
+    if(i<0) return;
+    sec.items.splice(i,1); save(); render();
+  });
   r.appendChild(del);
   return r;
+}
+
+/* ---------- drag to reorder ---------- */
+/* The tile is moved in the DOM while the finger travels, so the gap opens
+   exactly where it will land and a drop into the other section moves it
+   there. The item arrays are rebuilt from that DOM order once, on drop. */
+var drag=null;
+
+function rowHosts(){ return [].slice.call(document.querySelectorAll("#sections .rows")); }
+
+function sectionOf(it){
+  for(var i=0;i<state.sections.length;i++){
+    if(state.sections[i].items.indexOf(it)>=0) return state.sections[i];
+  }
+  return null;
+}
+
+function commitOrder(){
+  rowHosts().forEach(function(host){
+    if(!host._sec) return;
+    var next=[];
+    [].slice.call(host.children).forEach(function(el){ if(el._item) next.push(el._item); });
+    host._sec.items=next;
+  });
+  save();
+}
+
+/* run a DOM change, then slide every row that moved from where it was.
+   prefers-reduced-motion kills the transition through the global rule. */
+function flip(mutate){
+  var rows=[].slice.call(document.querySelectorAll("#sections .erow"));
+  var was=rows.map(function(el){ return el.getBoundingClientRect().top; });
+  mutate();
+  rows.forEach(function(el,i){
+    if(drag&&el===drag.el) return;
+    var dy=was[i]-el.getBoundingClientRect().top;
+    if(!dy) return;
+    el.style.transition="none";
+    el.style.transform="translateY("+dy+"px)";
+    el.getBoundingClientRect();
+    el.style.transition="transform .16s cubic-bezier(.4,0,.2,1)";
+    el.style.transform="";
+  });
+}
+
+/* the section the finger is over, or the nearest one when it is in the gap */
+function hostAt(y){
+  var best=null, bestD=Infinity;
+  rowHosts().forEach(function(h){
+    var r=h.getBoundingClientRect();
+    var d = y<r.top ? r.top-y : (y>r.bottom ? y-r.bottom : 0);
+    if(d<bestD){ bestD=d; best=h; }
+  });
+  return best;
+}
+
+function slotIn(host,y){
+  var kids=[].slice.call(host.children), i, r;
+  for(i=0;i<kids.length;i++){
+    if(kids[i]===drag.el) continue;
+    r=kids[i].getBoundingClientRect();
+    if(y < r.top + r.height/2) return kids[i];
+  }
+  return null;
+}
+
+/* reseat the tile in the list, then park it back under the finger */
+function place(){
+  var el=drag.el, host=hostAt(drag.y);
+  if(host){
+    var before=slotIn(host,drag.y);
+    if(host!==el.parentNode || before!==el.nextSibling){
+      flip(function(){ host.insertBefore(el,before); });
+    }
+  }
+  el.style.transform="";
+  el.style.transform="translateY("+((drag.y-drag.grab)-el.getBoundingClientRect().top)+"px)";
+}
+
+/* the list is taller than the phone, so dragging near an edge walks the page */
+function edgeScroll(){
+  if(!drag) return;
+  var pad=96, step=0;
+  if(drag.y<pad) step=-Math.ceil((pad-drag.y)/5);
+  else if(drag.y>window.innerHeight-pad) step=Math.ceil((drag.y-(window.innerHeight-pad))/5);
+  if(step){
+    var y0=window.pageYOffset;
+    window.scrollBy(0,step);
+    if(window.pageYOffset!==y0) place();
+  }
+  drag.raf=requestAnimationFrame(edgeScroll);
+}
+
+function onDragMove(e){
+  if(!drag||e.pointerId!==drag.id) return;
+  e.preventDefault();
+  if(Math.abs(e.clientY-drag.y0)>2) drag.moved=true;
+  drag.y=e.clientY;
+  place();
+}
+
+function onDragEnd(e){
+  if(!drag||(e&&e.pointerId!==drag.id)) return;
+  stopDrag(drag.moved);
+}
+
+/* commit only when the tile actually travelled - a tap on the handle is not
+   an edit, and saving one would push it to the other devices for nothing */
+function stopDrag(commit){
+  if(!drag) return;
+  var el=drag.el, live=$("sections").contains(el);
+  cancelAnimationFrame(drag.raf);
+  document.removeEventListener("pointermove",onDragMove);
+  document.removeEventListener("pointerup",onDragEnd);
+  document.removeEventListener("pointercancel",onDragEnd);
+  document.body.classList.remove("dragging");
+  el.classList.remove("lift");
+  el.style.transition=""; el.style.transform="";
+  drag=null;
+  if(commit&&live) commitOrder();
+}
+
+function startDrag(e,el){
+  if(drag||e.button) return;
+  drag={el:el,id:e.pointerId,y:e.clientY,y0:e.clientY,grab:e.clientY-el.getBoundingClientRect().top,raf:0,moved:false};
+  el.classList.add("lift");
+  document.body.classList.add("dragging");
+  document.addEventListener("pointermove",onDragMove,{passive:false});
+  document.addEventListener("pointerup",onDragEnd);
+  document.addEventListener("pointercancel",onDragEnd);
+  drag.raf=requestAnimationFrame(edgeScroll);
+  place();
+  if(navigator.vibrate) navigator.vibrate(6);
+}
+
+/* the handle keeps the keyboard path the arrow buttons used to provide */
+function nudge(it,d){
+  var sec=sectionOf(it); if(!sec) return;
+  var i=sec.items.indexOf(it), j=i+d;
+  if(j<0||j>=sec.items.length) return;
+  sec.items[i]=sec.items[j]; sec.items[j]=it;
+  save(); render();
+  var rows=[].slice.call(document.querySelectorAll("#sections .erow")), k;
+  for(k=0;k<rows.length;k++){
+    if(rows[k]._item===it){ rows[k].querySelector(".grip").focus(); break; }
+  }
 }
 
 /* ---------- sync panel ---------- */
@@ -1300,6 +1483,7 @@ function renderNote(){
 }
 
 function render(){
+  if(drag) stopDrag(false);
   var onStats = view==="stats";
   ["wordmark","meter","quoteHost","sections","editTools","log","note","fab"].forEach(function(id){
     $(id).hidden = onStats;

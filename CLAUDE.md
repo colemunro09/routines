@@ -59,6 +59,11 @@ URL, anon key, or secret key. None of those are in the repo today; keep it that 
 }
 ```
 
+Item order lives in the arrays themselves. Dragging a row moves the element in the DOM as
+the finger travels and rebuilds every section's `items` from that DOM order on drop, so a
+row dragged between sections just changes which array it lands in — which is why an edit
+row looks its item up (`sectionOf`) instead of closing over the section it was rendered in.
+
 `log` keys are **local** dates (`keyOf()`), never UTC — a checkmark belongs to the day the
 person experienced, not the day in Greenwich. Deleted items may leave stale ids in `log`;
 that's intentional and harmless, since completion is computed against items that currently
@@ -147,5 +152,6 @@ node --check <(sed -n '/^<script>/,/^<\/script>/p' index.html | sed '1d;$d')
 ```
 
 Then open the file, and check: a row toggles and the header count follows; edit mode
-renames and reorders and the change survives a reload; both themes are legible (flip the OS
+renames, and dragging a row by its grip handle reorders it — within a section and across
+into the other one — and the change survives a reload; both themes are legible (flip the OS
 appearance); the layout holds at 375px wide.
