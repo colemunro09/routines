@@ -162,8 +162,9 @@ crimson (`#A31F34` light, `#FF3B4E` dark) — the single accent, used for checks
 the streak, and the mid-list quote. Keep it to one, and read it from `:root` rather than
 from this file, which has been wrong about it before.
 
-Tap targets are ≥54px tall. `prefers-reduced-motion` kills all transitions — don't add
-animation that ignores it.
+Habit rows are ≥54px tall (`.row` carries `min-height:54px`); the stacked `.btn` controls
+are 47px, which still clears the 44pt platform minimum. `prefers-reduced-motion` kills all
+transitions — don't add animation that ignores it.
 
 ## Decisions already settled — don't relitigate
 
