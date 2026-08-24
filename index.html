@@ -1,0 +1,882 @@
+<title>Daily Routines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --paper:#ECEEEC;
+  --surface:#FFFFFF;
+  --surface-2:#F4F6F4;
+  --line:#D7DCD9;
+  --line-soft:#E3E7E4;
+  --ink:#131A21;
+  --ink-2:#5A6A70;
+  --ink-3:#8898A0;
+  --accent:#0E6B5E;
+  --accent-ink:#FFFFFF;
+  --accent-soft:rgba(14,107,94,.10);
+  --danger:#A5342A;
+  --shadow:0 1px 2px rgba(19,26,33,.05), 0 8px 24px -16px rgba(19,26,33,.28);
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0C1214;
+    --surface:#141C1F;
+    --surface-2:#182226;
+    --line:#25322F;
+    --line-soft:#1E2A2C;
+    --ink:#E7EDEA;
+    --ink-2:#93A6A1;
+    --ink-3:#6E827E;
+    --accent:#4FBFA8;
+    --accent-ink:#07110F;
+    --accent-soft:rgba(79,191,168,.14);
+    --danger:#E08278;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0C1214;
+  --surface:#141C1F;
+  --surface-2:#182226;
+  --line:#25322F;
+  --line-soft:#1E2A2C;
+  --ink:#E7EDEA;
+  --ink-2:#93A6A1;
+  --ink-3:#6E827E;
+  --accent:#4FBFA8;
+  --accent-ink:#07110F;
+  --accent-soft:rgba(79,191,168,.14);
+  --danger:#E08278;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.wrap{max-width:34rem;margin:0 auto;padding:0 16px 96px}
+
+/* ---------- header ---------- */
+.top{
+  position:sticky;top:0;z-index:20;
+  background:var(--paper);
+  background:color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter:saturate(1.4) blur(12px);
+  -webkit-backdrop-filter:saturate(1.4) blur(12px);
+  border-bottom:1px solid var(--line-soft);
+  padding-top:env(safe-area-inset-top);
+}
+.top-inner{max-width:34rem;margin:0 auto;padding:14px 16px 10px;display:flex;flex-direction:column;gap:10px}
+.top-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{
+  font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+  font-weight:700;font-size:26px;line-height:1;letter-spacing:-.02em;margin:0;
+}
+.head-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.date{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;letter-spacing:.10em;text-transform:uppercase;color:var(--ink-2);
+}
+.chip{
+  display:flex;align-items:center;gap:6px;
+  background:none;border:0;padding:0;cursor:pointer;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
+}
+.chip i{width:6px;height:6px;border-radius:99px;background:var(--ink-3);flex:none}
+.chip.ok i{background:var(--accent)}
+.chip.err i{background:var(--danger)}
+.chip.busy i{background:var(--accent);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+.meter{display:flex;align-items:center;gap:10px}
+.track{flex:1;height:5px;border-radius:99px;background:var(--line);overflow:hidden}
+.fill{height:100%;width:0;border-radius:99px;background:var(--accent);transition:width .35s cubic-bezier(.4,0,.2,1)}
+.count{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2);
+}
+.count b{color:var(--ink);font-weight:500}
+
+.quote{
+  margin:18px 0 22px;padding-left:14px;border-left:2px solid var(--accent);
+  font-style:italic;color:var(--ink-2);font-size:14.5px;line-height:1.5;
+}
+
+/* ---------- sections ---------- */
+.interlude{display:flex;align-items:center;gap:14px;margin:2px 0 18px;padding:0 6px}
+.interlude .rule{flex:1;height:1px;background:var(--line)}
+.interlude p{
+  margin:0;font-style:italic;font-size:14px;line-height:1.4;
+  color:var(--accent);text-align:center;text-wrap:balance;
+}
+.qedit.mid{text-align:center;color:var(--accent);min-height:52px;margin:2px 0 18px}
+
+.sec{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;
+}
+.sec-head{
+  display:flex;align-items:center;gap:8px;
+  padding:13px 16px 11px;border-bottom:1px solid var(--line-soft);
+  background:var(--surface-2);
+}
+.sec-head svg{width:14px;height:14px;color:var(--accent);flex:none}
+.sec-title{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;
+}
+.sec-count{
+  margin-left:auto;font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;
+}
+.rows{display:flex;flex-direction:column}
+
+.row{
+  display:flex;align-items:center;gap:13px;width:100%;
+  min-height:54px;padding:8px 16px;
+  background:none;border:0;border-top:1px solid var(--line-soft);
+  text-align:left;cursor:pointer;
+}
+.rows .row:first-child{border-top:0}
+.row:active{background:var(--surface-2)}
+.box{
+  flex:none;width:23px;height:23px;border-radius:7px;
+  border:1.6px solid var(--line);background:transparent;
+  display:grid;place-items:center;
+  transition:background .18s ease,border-color .18s ease,transform .18s cubic-bezier(.3,1.6,.6,1);
+}
+.box svg{width:13px;height:13px;color:var(--accent-ink)}
+.box path{
+  fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:22;stroke-dashoffset:22;transition:stroke-dashoffset .22s ease .04s;
+}
+.row[aria-pressed="true"] .box{background:var(--accent);border-color:var(--accent)}
+.row[aria-pressed="true"] .box path{stroke-dashoffset:0}
+.row:active .box{transform:scale(.9)}
+.label{font-size:16px;transition:color .18s ease}
+.row[aria-pressed="true"] .label{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1px}
+
+/* ---------- log ---------- */
+.log{margin-top:26px;padding:16px;border:1px solid var(--line-soft);border-radius:var(--r);background:var(--surface)}
+.log-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+.log-title{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.streak{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.streak b{color:var(--accent);font-weight:500}
+.dots{display:flex;gap:6px;align-items:flex-end}
+.day{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.bar{width:100%;height:34px;border-radius:5px;background:var(--line-soft);position:relative;overflow:hidden}
+.bar span{position:absolute;left:0;right:0;bottom:0;background:var(--accent);border-radius:5px;transition:height .4s ease}
+.day.today .bar{box-shadow:0 0 0 1.5px var(--accent)}
+.dow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;color:var(--ink-3);letter-spacing:.04em}
+
+/* ---------- edit mode ---------- */
+.erow{display:flex;align-items:center;gap:8px;padding:7px 10px 7px 12px;border-top:1px solid var(--line-soft)}
+.rows .erow:first-child{border-top:0}
+.erow input{
+  flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line-soft);
+  border-radius:9px;padding:9px 10px;font-size:15px;
+}
+.erow input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.mini{
+  flex:none;width:32px;height:32px;display:grid;place-items:center;
+  background:none;border:1px solid transparent;border-radius:8px;color:var(--ink-3);cursor:pointer;
+}
+.mini:hover{color:var(--ink);background:var(--surface-2)}
+.mini.del:hover{color:var(--danger)}
+.mini svg{width:15px;height:15px}
+.mini[disabled]{opacity:.25;cursor:default}
+.add{
+  display:flex;align-items:center;gap:9px;width:100%;padding:12px 16px;
+  border:0;border-top:1px dashed var(--line);background:none;cursor:pointer;
+  font-size:14.5px;color:var(--accent);font-weight:500;
+}
+.add svg{width:15px;height:15px}
+.sec-head input{
+  flex:1;min-width:0;background:var(--surface);border:1px solid var(--line-soft);border-radius:8px;
+  padding:6px 9px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;
+  letter-spacing:.14em;text-transform:uppercase;
+}
+.qedit{
+  width:100%;margin:18px 0 22px;background:var(--surface);border:1px solid var(--line-soft);
+  border-radius:10px;padding:11px 12px;font-style:italic;color:var(--ink-2);
+  font-size:14.5px;line-height:1.5;resize:vertical;min-height:64px;
+}
+
+.tools{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 14px;border-radius:11px;border:1px solid var(--line);
+  background:var(--surface);cursor:pointer;font-size:14.5px;font-weight:500;
+}
+.btn svg{width:15px;height:15px}
+.btn:hover{border-color:var(--ink-3)}
+.btn.ghost{color:var(--ink-2);background:none}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+details{border:1px solid var(--line-soft);border-radius:11px;background:var(--surface);overflow:hidden}
+summary{padding:12px 14px;cursor:pointer;font-size:14px;color:var(--ink-2);list-style:none;display:flex;align-items:center;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary svg{width:14px;height:14px;color:var(--ink-3)}
+details[open] summary{border-bottom:1px solid var(--line-soft)}
+.dpad{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.dpad p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.5}
+.dpad p.hint{font-size:12px;color:var(--ink-3)}
+.dpad label{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.dpad input,.dpad textarea{
+  width:100%;background:var(--surface-2);border:1px solid var(--line-soft);
+  border-radius:9px;padding:10px;font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;resize:vertical;
+}
+.dpad textarea{min-height:110px}
+.dpad input:focus,.dpad textarea:focus{outline:none;border-color:var(--accent)}
+.field{display:flex;flex-direction:column;gap:5px}
+.ol{margin:0;padding-left:18px;font-size:13px;color:var(--ink-2);line-height:1.6}
+.ol li{margin-bottom:6px}
+.ol code{font-family:"IBM Plex Mono",monospace;font-size:11.5px;background:var(--surface-2);padding:1px 4px;border-radius:4px}
+
+/* ---------- floating edit toggle ---------- */
+.fab{
+  position:fixed;right:max(16px,env(safe-area-inset-right));
+  bottom:calc(18px + env(safe-area-inset-bottom));z-index:30;
+  display:flex;align-items:center;gap:8px;
+  padding:12px 18px;border-radius:99px;border:1px solid var(--line);
+  background:var(--surface);box-shadow:var(--shadow);cursor:pointer;
+  font-size:14px;font-weight:500;
+}
+.fab svg{width:15px;height:15px}
+.fab.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+.note{margin:14px 0 0;font-size:12.5px;color:var(--ink-3);text-align:center;line-height:1.5}
+.warn{
+  margin:14px 0 0;padding:10px 12px;border-radius:10px;
+  background:var(--accent-soft);color:var(--ink-2);font-size:13px;line-height:1.5;
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+
+<div class="top">
+  <div class="top-inner">
+    <div class="top-row">
+      <h1>Routines</h1>
+      <div class="head-right">
+        <div class="date" id="date"></div>
+        <button class="chip" id="chip" type="button"><i></i><span id="chipText">Local only</span></button>
+      </div>
+    </div>
+    <div class="meter">
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <div class="count" id="count"></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="quoteHost"></div>
+  <div id="sections"></div>
+  <div id="editTools"></div>
+  <div class="log" id="log"></div>
+  <p class="note" id="note"></p>
+</div>
+
+<button class="fab" id="fab" type="button">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+  <span id="fabLabel">Edit list</span>
+</button>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- home-screen chrome ---------- */
+[["apple-mobile-web-app-capable","yes"],
+ ["apple-mobile-web-app-status-bar-style","default"],
+ ["apple-mobile-web-app-title","Routines"],
+ ["mobile-web-app-capable","yes"],
+ ["viewport","width=device-width, initial-scale=1, viewport-fit=cover"]].forEach(function(m){
+  var t=document.querySelector('meta[name="'+m[0]+'"]');
+  if(!t){t=document.createElement("meta");t.name=m[0];document.head.appendChild(t);}
+  t.content=m[1];
+});
+
+var KEY="routines.v1", CFGKEY="routines.cfg";
+var storageOK=true, memory={};
+try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); }catch(e){ storageOK=false; }
+function lsGet(k){ if(!storageOK) return memory[k]||null; try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ memory[k]=v; if(!storageOK) return; try{ localStorage.setItem(k,v); }catch(e){} }
+function lsDel(k){ delete memory[k]; if(!storageOK) return; try{ localStorage.removeItem(k); }catch(e){} }
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function secret(){
+  var a=new Uint8Array(24); (self.crypto||self.msCrypto).getRandomValues(a);
+  return Array.prototype.map.call(a,function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+}
+
+var DEFAULT={
+  v:2,
+  quote:"Write your own line here — tap Edit list to change it.",
+  midQuote:"A line between morning and evening.",
+  sections:[
+    {id:uid(),icon:"sun",title:"Morning",items:[
+      "Make bed","Brush teeth","Stretch","Workout","Shower","Breakfast & water"
+    ].map(function(t){return {id:uid(),label:t};})},
+    {id:uid(),icon:"moon",title:"Evening",items:[
+      "Brush teeth","Stretch","Read","Plan tomorrow"
+    ].map(function(t){return {id:uid(),label:t};})}
+  ],
+  log:{},
+  mtime:0
+};
+
+/* ---------- load local doc ---------- */
+var state;
+try{ state=JSON.parse(lsGet(KEY)||"null"); }catch(e){ state=null; }
+if(!state) state=JSON.parse(JSON.stringify(DEFAULT));
+if(!state.log) state.log={};
+if(!state.mtime) state.mtime=0;
+if(!state.v) state.v=2;
+if(typeof state.midQuote!=="string") state.midQuote="";
+var editing=false;
+
+/* ---------- sync config ---------- */
+var cfg=null;
+try{ cfg=JSON.parse(lsGet(CFGKEY)||"null"); }catch(e){ cfg=null; }
+
+/* a setup link carries the whole config in the hash */
+(function readHash(){
+  var m=/[#&]s=([A-Za-z0-9_\-]+)/.exec(location.hash||"");
+  if(!m) return;
+  try{
+    var json=decodeURIComponent(escape(atob(m[1].replace(/-/g,"+").replace(/_/g,"/"))));
+    var next=JSON.parse(json);
+    if(next.url&&next.anon&&next.key){
+      cfg=next; lsSet(CFGKEY,JSON.stringify(cfg));
+      history.replaceState(null,"",location.pathname+location.search);
+    }
+  }catch(e){}
+})();
+
+function setupLink(){
+  if(!cfg) return "";
+  var b=btoa(unescape(encodeURIComponent(JSON.stringify(cfg))))
+        .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  return location.origin+location.pathname+"#s="+b;
+}
+
+var sync={state:"off",msg:"Local only",at:0};
+function setSync(s,msg){ sync.state=s; sync.msg=msg; paintChip(); }
+
+function rpc(fn,body){
+  var base=String(cfg.url).replace(/\/+$/,"");
+  return fetch(base+"/rest/v1/rpc/"+fn,{
+    method:"POST",
+    headers:{"Content-Type":"application/json","apikey":cfg.anon,"Authorization":"Bearer "+cfg.anon},
+    body:JSON.stringify(body)
+  }).then(function(r){
+    if(!r.ok) return r.text().then(function(t){ throw new Error(r.status+" "+t.slice(0,140)); });
+    return r.text().then(function(t){ return t?JSON.parse(t):null; });
+  });
+}
+
+function mergeDocs(local,remote){
+  if(!remote||!remote.sections) return local;
+  var newer=(remote.mtime||0)>(local.mtime||0)?remote:local;
+  var older=newer===remote?local:remote;
+  var out=JSON.parse(JSON.stringify(newer));
+  out.log=Object.assign({},older.log||{},newer.log||{});
+  return out;
+}
+
+var pushTimer=null, pulling=false;
+function schedulePush(){
+  if(!cfg) return;
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(push,1200);
+}
+function push(){
+  if(!cfg) return Promise.resolve();
+  setSync("busy","Saving…");
+  return rpc("routines_put",{k:cfg.key,d:state}).then(function(){
+    setSync("ok","Synced");
+  }).catch(function(err){
+    setSync("err","Sync error");
+    sync.detail=String(err.message||err);
+  });
+}
+function pull(){
+  if(!cfg||pulling) return Promise.resolve();
+  pulling=true;
+  setSync("busy","Syncing…");
+  return rpc("routines_get",{k:cfg.key}).then(function(remote){
+    var before=JSON.stringify(state);
+    state=mergeDocs(state,remote);
+    saveLocal();
+    if(JSON.stringify(state)!==before) render();
+    setSync("ok","Synced");
+    if(!remote||(state.mtime||0)>(remote.mtime||0)) return push();
+  }).catch(function(err){
+    setSync("err","Sync error");
+    sync.detail=String(err.message||err);
+  }).then(function(){ pulling=false; });
+}
+
+function saveLocal(){ lsSet(KEY,JSON.stringify(state)); }
+function save(){ state.mtime=Date.now(); saveLocal(); schedulePush(); }
+
+/* ---------- dates ---------- */
+function keyOf(d){
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function today(){ return keyOf(new Date()); }
+var day=today();
+
+function allItems(){ return state.sections.reduce(function(a,s){ return a.concat(s.items); },[]); }
+function doneOn(k){
+  var rec=state.log[k]||{}, items=allItems(), n=0;
+  items.forEach(function(it){ if(rec[it.id]) n++; });
+  return {done:n,total:items.length};
+}
+function pctOn(k){ var d=doneOn(k); return d.total? d.done/d.total : 0; }
+function isDone(id){ return !!(state.log[day]&&state.log[day][id]); }
+function toggle(id){
+  if(!state.log[day]) state.log[day]={};
+  if(state.log[day][id]) delete state.log[day][id];
+  else state.log[day][id]=1;
+  if(!Object.keys(state.log[day]).length) delete state.log[day];
+  save();
+}
+
+/* ---------- icons ---------- */
+var ICON={
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 13.2A8.5 8.5 0 1 1 10.8 3a6.8 6.8 0 0 0 10.2 10.2Z"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><path d="m5 12.6 4.4 4.4L19 7"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>',
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  cloud:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .3-9A6 6 0 0 0 6.2 11 3.5 3.5 0 0 0 7 19Z"/></svg>',
+  disk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M9 3v6h6V3M8 21v-6h8v6"/></svg>'
+};
+
+var $=function(id){ return document.getElementById(id); };
+
+/* ---------- render ---------- */
+function paintChip(){
+  var c=$("chip");
+  c.className="chip"+(sync.state==="ok"?" ok":sync.state==="err"?" err":sync.state==="busy"?" busy":"");
+  $("chipText").textContent=sync.msg;
+}
+
+function renderHeader(){
+  var d=new Date();
+  $("date").textContent=d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+  var t=doneOn(day);
+  $("fill").style.width=(t.total? (t.done/t.total*100):0)+"%";
+  $("count").innerHTML="<b>"+t.done+"</b> / "+t.total;
+  paintChip();
+}
+
+function renderQuote(){
+  var host=$("quoteHost");
+  host.innerHTML="";
+  if(editing){
+    var ta=document.createElement("textarea");
+    ta.className="qedit"; ta.value=state.quote; ta.placeholder="A line for the top of the day";
+    ta.setAttribute("aria-label","Daily reminder");
+    ta.addEventListener("input",function(){ state.quote=ta.value; save(); });
+    host.appendChild(ta);
+  }else if(state.quote.trim()){
+    var p=document.createElement("p");
+    p.className="quote"; p.textContent=state.quote;
+    host.appendChild(p);
+  }
+}
+
+function interlude(){
+  if(editing){
+    var ta=document.createElement("textarea");
+    ta.className="qedit mid"; ta.value=state.midQuote;
+    ta.placeholder="A line between morning and evening";
+    ta.setAttribute("aria-label","Mid-day reminder");
+    ta.addEventListener("input",function(){ state.midQuote=ta.value; save(); });
+    return ta;
+  }
+  var w=document.createElement("div");
+  if(!state.midQuote.trim()){ w.style.height="4px"; return w; }
+  w.className="interlude";
+  w.innerHTML='<span class="rule"></span><p></p><span class="rule"></span>';
+  w.querySelector("p").textContent=state.midQuote;
+  return w;
+}
+
+function renderSections(){
+  var host=$("sections");
+  host.innerHTML="";
+  state.sections.forEach(function(sec,si){
+    var card=document.createElement("div"); card.className="sec";
+    var head=document.createElement("div"); head.className="sec-head";
+    head.innerHTML=ICON[sec.icon]||ICON.sun;
+    if(editing){
+      var ti=document.createElement("input");
+      ti.value=sec.title; ti.setAttribute("aria-label","Section name");
+      ti.addEventListener("input",function(){ sec.title=ti.value; save(); });
+      head.appendChild(ti);
+      var sdel=document.createElement("button");
+      sdel.className="mini del"; sdel.type="button"; sdel.title="Delete section"; sdel.innerHTML=ICON.trash;
+      sdel.addEventListener("click",function(){
+        if(confirm("Delete the "+(sec.title||"untitled")+" section and its items?")){
+          state.sections.splice(si,1); save(); render();
+        }
+      });
+      head.appendChild(sdel);
+    }else{
+      var h=document.createElement("div"); h.className="sec-title"; h.textContent=sec.title;
+      head.appendChild(h);
+      var c=document.createElement("div"); c.className="sec-count";
+      c.textContent=sec.items.filter(function(it){ return isDone(it.id); }).length+"/"+sec.items.length;
+      head.appendChild(c);
+    }
+    card.appendChild(head);
+
+    var rows=document.createElement("div"); rows.className="rows";
+    sec.items.forEach(function(it,ii){ rows.appendChild(editing? editRow(sec,it,ii) : checkRow(it)); });
+    card.appendChild(rows);
+
+    if(editing){
+      var add=document.createElement("button");
+      add.className="add"; add.type="button";
+      add.innerHTML=ICON.plus+"<span>Add item</span>";
+      add.addEventListener("click",function(){
+        sec.items.push({id:uid(),label:""}); save(); render();
+        var host2=document.getElementById("sections");
+        var inputs=host2.children[si].querySelectorAll(".erow input");
+        if(inputs.length) inputs[inputs.length-1].focus();
+      });
+      card.appendChild(add);
+    }
+    host.appendChild(card);
+    if(si===0) host.appendChild(interlude());
+  });
+}
+
+function checkRow(it){
+  var b=document.createElement("button");
+  b.className="row"; b.type="button";
+  b.setAttribute("aria-pressed", isDone(it.id)?"true":"false");
+  b.innerHTML='<span class="box">'+ICON.check+'</span><span class="label"></span>';
+  b.querySelector(".label").textContent=it.label;
+  b.addEventListener("click",function(){
+    toggle(it.id);
+    b.setAttribute("aria-pressed", isDone(it.id)?"true":"false");
+    renderHeader(); renderLog();
+    var card=b.closest(".sec"), cnt=card.querySelector(".sec-count");
+    if(cnt){
+      var sec=state.sections.filter(function(s){ return s.items.some(function(x){return x.id===it.id;}); })[0];
+      if(sec) cnt.textContent=sec.items.filter(function(x){ return isDone(x.id); }).length+"/"+sec.items.length;
+    }
+    if(navigator.vibrate) navigator.vibrate(8);
+  });
+  return b;
+}
+
+function editRow(sec,it,ii){
+  var r=document.createElement("div"); r.className="erow";
+  var inp=document.createElement("input");
+  inp.value=it.label; inp.placeholder="New habit"; inp.setAttribute("aria-label","Habit name");
+  inp.addEventListener("input",function(){ it.label=inp.value; save(); });
+  r.appendChild(inp);
+  [["up",-1],["down",1]].forEach(function(m){
+    var btn=document.createElement("button");
+    btn.className="mini"; btn.type="button"; btn.innerHTML=ICON[m[0]];
+    btn.title=m[0]==="up"?"Move up":"Move down";
+    var j=ii+m[1];
+    if(j<0||j>=sec.items.length) btn.disabled=true;
+    btn.addEventListener("click",function(){
+      var tmp=sec.items[ii]; sec.items[ii]=sec.items[j]; sec.items[j]=tmp; save(); render();
+    });
+    r.appendChild(btn);
+  });
+  var del=document.createElement("button");
+  del.className="mini del"; del.type="button"; del.innerHTML=ICON.trash; del.title="Delete";
+  del.addEventListener("click",function(){ sec.items.splice(ii,1); save(); render(); });
+  r.appendChild(del);
+  return r;
+}
+
+/* ---------- sync panel ---------- */
+var SQL=[
+"create table if not exists routines (",
+"  key text primary key,",
+"  data jsonb not null,",
+"  updated_at timestamptz not null default now()",
+");",
+"alter table routines enable row level security;",
+"",
+"create or replace function routines_get(k text)",
+"returns jsonb language sql security definer set search_path = public as $$",
+"  select data from routines where key = k;",
+"$$;",
+"",
+"create or replace function routines_put(k text, d jsonb)",
+"returns timestamptz language plpgsql security definer set search_path = public as $$",
+"declare ts timestamptz;",
+"begin",
+"  insert into routines(key, data) values (k, d)",
+"  on conflict (key) do update set data = excluded.data, updated_at = now()",
+"  returning updated_at into ts;",
+"  return ts;",
+"end;",
+"$$;",
+"",
+"revoke all on function routines_get(text) from public;",
+"revoke all on function routines_put(text, jsonb) from public;",
+"grant execute on function routines_get(text) to anon;",
+"grant execute on function routines_put(text, jsonb) to anon;"
+].join("\n");
+
+function field(labelText,value,placeholder){
+  var f=document.createElement("div"); f.className="field";
+  var l=document.createElement("label"); l.textContent=labelText;
+  var i=document.createElement("input"); i.value=value||""; i.placeholder=placeholder||"";
+  i.spellcheck=false; i.autocapitalize="off"; i.autocomplete="off";
+  l.setAttribute("for", i.id = "f_"+uid());
+  f.appendChild(l); f.appendChild(i);
+  f.input=i;
+  return f;
+}
+
+function syncPanel(){
+  var det=document.createElement("details"); det.id="syncPanel";
+  var sum=document.createElement("summary");
+  sum.innerHTML=ICON.cloud+"<span>Sync across devices"+(cfg?" — on":"")+"</span>";
+  det.appendChild(sum);
+  var pad=document.createElement("div"); pad.className="dpad";
+
+  var steps=document.createElement("ol"); steps.className="ol";
+  steps.innerHTML=
+    "<li>In Supabase, open <b>SQL Editor</b>, paste the block below, and run it. Once, ever.</li>"+
+    "<li>Open <b>Project Settings → API</b>. Copy the <b>Project URL</b> and the <b>anon public</b> key into the fields below.</li>"+
+    "<li>Press <b>Turn on sync</b>, then <b>Copy setup link</b> and open that link on your other devices.</li>";
+  pad.appendChild(steps);
+
+  var sqlTa=document.createElement("textarea");
+  sqlTa.value=SQL; sqlTa.readOnly=true; sqlTa.setAttribute("aria-label","Setup SQL");
+  pad.appendChild(sqlTa);
+  var copySql=document.createElement("button");
+  copySql.className="btn ghost"; copySql.type="button"; copySql.textContent="Copy the SQL";
+  copySql.addEventListener("click",function(){ copy(sqlTa,copySql,"Copy the SQL"); });
+  pad.appendChild(copySql);
+
+  var fUrl=field("Project URL",cfg?cfg.url:"","https://xxxx.supabase.co");
+  var fKey=field("anon public key",cfg?cfg.anon:"","eyJhbGciOi…");
+  var fSec=field("Your secret key",cfg?cfg.key:secret(),"");
+  if(!cfg && /supabase\.co$/i.test(location.hostname)) fUrl.input.value=location.origin;
+  pad.appendChild(fUrl); pad.appendChild(fKey); pad.appendChild(fSec);
+
+  var hint=document.createElement("p"); hint.className="hint";
+  hint.textContent="The secret key is the whole login — anyone with the setup link sees this list. Keep the link out of public places and it stays yours.";
+  pad.appendChild(hint);
+
+  var on=document.createElement("button");
+  on.className="btn primary"; on.type="button"; on.textContent=cfg?"Save and sync now":"Turn on sync";
+  on.addEventListener("click",function(){
+    var u=fUrl.input.value.trim().replace(/\/+$/,""), a=fKey.input.value.trim(), k=fSec.input.value.trim();
+    if(!/^https?:\/\//.test(u)||!a||!k){ alert("Fill in the project URL, the anon key, and a secret key."); return; }
+    cfg={url:u,anon:a,key:k};
+    lsSet(CFGKEY,JSON.stringify(cfg));
+    state.mtime=Date.now(); saveLocal();
+    pull().then(function(){ render(); document.getElementById("syncPanel").open=true; });
+  });
+  pad.appendChild(on);
+
+  if(cfg){
+    var linkTa=document.createElement("textarea");
+    linkTa.value=setupLink(); linkTa.readOnly=true; linkTa.style.minHeight="70px";
+    linkTa.setAttribute("aria-label","Setup link");
+    pad.appendChild(linkTa);
+    var copyLink=document.createElement("button");
+    copyLink.className="btn"; copyLink.type="button"; copyLink.textContent="Copy setup link";
+    copyLink.addEventListener("click",function(){ copy(linkTa,copyLink,"Copy setup link"); });
+    pad.appendChild(copyLink);
+
+    var off=document.createElement("button");
+    off.className="btn ghost"; off.type="button"; off.textContent="Turn sync off on this device";
+    off.addEventListener("click",function(){
+      if(!confirm("Stop syncing on this device? Your list stays here and stays in Supabase.")) return;
+      cfg=null; lsDel(CFGKEY); setSync("off","Local only"); render();
+    });
+    pad.appendChild(off);
+
+    if(sync.state==="err"&&sync.detail){
+      var e=document.createElement("p"); e.className="hint";
+      e.textContent="Last error: "+sync.detail;
+      pad.appendChild(e);
+    }
+  }
+
+  det.appendChild(pad);
+  return det;
+}
+
+function copy(ta,btn,restore){
+  var done=function(){ btn.textContent="Copied"; setTimeout(function(){ btn.textContent=restore; },1400); };
+  try{
+    navigator.clipboard.writeText(ta.value).then(done,function(){ legacy(); });
+  }catch(e){ legacy(); }
+  function legacy(){
+    ta.removeAttribute("readonly"); ta.select(); ta.setSelectionRange(0,999999);
+    try{ document.execCommand("copy"); done(); }catch(e){ btn.textContent="Select the text and copy"; }
+    ta.readOnly=true;
+  }
+}
+
+function renderEditTools(){
+  var host=$("editTools");
+  host.innerHTML="";
+  if(!editing) return;
+  var box=document.createElement("div"); box.className="tools";
+
+  var addSec=document.createElement("button");
+  addSec.className="btn"; addSec.type="button";
+  addSec.innerHTML=ICON.plus+"<span>Add a section</span>";
+  addSec.addEventListener("click",function(){
+    state.sections.push({id:uid(),icon:"sun",title:"New section",items:[{id:uid(),label:""}]});
+    save(); render();
+  });
+  box.appendChild(addSec);
+  box.appendChild(syncPanel());
+
+  var det=document.createElement("details");
+  var sum=document.createElement("summary");
+  sum.innerHTML=ICON.disk+"<span>Backup &amp; restore</span>";
+  det.appendChild(sum);
+  var pad=document.createElement("div"); pad.className="dpad";
+  var p=document.createElement("p");
+  p.textContent="A copy of everything, as text. Paste an old backup in and press Restore to roll back.";
+  var ta=document.createElement("textarea");
+  ta.value=JSON.stringify(state); ta.setAttribute("aria-label","Backup data");
+  var rb=document.createElement("button");
+  rb.className="btn ghost"; rb.type="button"; rb.textContent="Restore from the text above";
+  rb.addEventListener("click",function(){
+    try{
+      var next=JSON.parse(ta.value);
+      if(!next.sections) throw new Error("bad");
+      state=next; if(!state.log) state.log={};
+      save(); editing=false; render();
+    }catch(e){ alert("That text isn't a valid backup — check that you pasted the whole thing."); }
+  });
+  pad.appendChild(p); pad.appendChild(ta); pad.appendChild(rb);
+  det.appendChild(pad);
+  box.appendChild(det);
+
+  var clr=document.createElement("button");
+  clr.className="btn ghost"; clr.type="button"; clr.textContent="Clear today's checkmarks";
+  clr.addEventListener("click",function(){
+    if(confirm("Uncheck everything for today?")){ delete state.log[day]; save(); render(); }
+  });
+  box.appendChild(clr);
+
+  host.appendChild(box);
+}
+
+function renderLog(){
+  var host=$("log");
+  var days=[];
+  for(var i=13;i>=0;i--){
+    var d=new Date(); d.setDate(d.getDate()-i);
+    days.push({k:keyOf(d),d:d});
+  }
+  var streak=0, cursor=new Date();
+  if(pctOn(today())<1) cursor.setDate(cursor.getDate()-1);
+  for(var g=0;g<400;g++){
+    if(pctOn(keyOf(cursor))>=1){ streak++; cursor.setDate(cursor.getDate()-1); }
+    else break;
+  }
+  var dows=["S","M","T","W","T","F","S"];
+  var html='<div class="log-head"><div class="log-title">Last 14 days</div>'+
+    '<div class="streak">'+(streak?'<b>'+streak+'</b> day streak':'no streak yet')+'</div></div><div class="dots">';
+  days.forEach(function(x,idx){
+    var p=Math.round(pctOn(x.k)*100);
+    html+='<div class="day'+(idx===13?" today":"")+'" title="'+x.k+' — '+p+'%">'+
+      '<div class="bar"><span style="height:'+p+'%"></span></div>'+
+      '<div class="dow">'+dows[x.d.getDay()]+'</div></div>';
+  });
+  html+='</div>';
+  host.innerHTML=html;
+}
+
+function renderNote(){
+  var n=$("note");
+  if(!storageOK){
+    n.className="warn";
+    n.textContent="This browser is blocking local storage, so checkmarks won't survive a reload here. Open the page directly in Safari or Chrome.";
+  }else if(cfg){
+    n.className="note";
+    n.textContent="Synced through Supabase. Checkboxes clear themselves at midnight.";
+  }else{
+    n.className="note";
+    n.textContent="Saved on this device. Turn on sync in Edit list to share it with your other devices.";
+  }
+}
+
+function render(){
+  renderHeader(); renderQuote(); renderSections(); renderEditTools(); renderLog(); renderNote();
+  $("fabLabel").textContent = editing? "Done" : "Edit list";
+  $("fab").classList.toggle("on", editing);
+  $("fab").querySelector("svg").innerHTML = editing
+    ? '<path d="m5 12.6 4.4 4.4L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    : '<path d="M12 20h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+}
+
+$("fab").addEventListener("click",function(){
+  if(editing){
+    state.sections.forEach(function(s){
+      s.items=s.items.filter(function(it){ return it.label.trim()!==""; });
+    });
+    state.sections=state.sections.filter(function(s){ return s.items.length||s.title.trim(); });
+    save();
+  }
+  editing=!editing;
+  render();
+  if(!editing) window.scrollTo({top:0,behavior:"smooth"});
+});
+
+$("chip").addEventListener("click",function(){
+  if(cfg&&sync.state!=="busy"){ pull(); return; }
+  editing=true; render();
+  var p=document.getElementById("syncPanel");
+  if(p){ p.open=true; p.scrollIntoView({behavior:"smooth",block:"center"}); }
+});
+
+setInterval(function(){
+  var t=today();
+  if(t!==day){ day=t; render(); }
+},20000);
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden) return;
+  var t=today(); if(t!==day) day=t;
+  render(); pull();
+});
+window.addEventListener("focus",function(){ pull(); });
+
+if(cfg) setSync("busy","Syncing…");
+render();
+if(cfg) pull();
+})();
+</script>
