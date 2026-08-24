@@ -65,7 +65,7 @@ body{
   line-height:1.45;
   -webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;
-  padding-bottom:env(safe-area-inset-bottom);
+  padding-bottom:calc(86px + env(safe-area-inset-bottom));
 }
 button,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
@@ -233,6 +233,8 @@ h1{
 .btn svg{width:15px;height:15px}
 .btn:hover{border-color:var(--ink-3)}
 .btn.ghost{color:var(--ink-2);background:none}
+.btn.danger{color:var(--danger)}
+.btn.danger:hover{border-color:var(--danger)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn.primary:hover{filter:brightness(1.08)}
 details{border:1px solid var(--line-soft);border-radius:11px;background:var(--surface);overflow:hidden}
@@ -240,6 +242,19 @@ summary{padding:12px 14px;cursor:pointer;font-size:14px;color:var(--ink-2);list-
 summary::-webkit-details-marker{display:none}
 summary svg{width:14px;height:14px;color:var(--ink-3)}
 details[open] summary{border-bottom:1px solid var(--line-soft)}
+summary .sum-label{flex:1;min-width:0}
+summary .chev{flex:none;display:flex;transition:transform .18s ease;color:var(--ink-3)}
+summary .chev svg{width:14px;height:14px}
+details[open] summary .chev{transform:rotate(180deg)}
+.sstat{
+  display:flex;align-items:center;gap:5px;flex:none;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
+}
+.sstat i{width:5px;height:5px;border-radius:99px;background:var(--ink-3);flex:none}
+.sstat.ok i{background:var(--accent)}
+.sstat.err i{background:var(--danger)}
+.sstat.busy i{background:var(--accent);animation:pulse 1s ease-in-out infinite}
 .dpad{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .dpad p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.5}
 .dpad p.hint{font-size:12px;color:var(--ink-3)}
@@ -521,11 +536,38 @@ var ICON={
 
 var $=function(id){ return document.getElementById(id); };
 
+/* icon + label + optional status + disclosure chevron */
+function summaryRow(iconKey,text,status){
+  var sum=document.createElement("summary");
+  sum.innerHTML=ICON[iconKey]+'<span class="sum-label"></span>';
+  sum.querySelector(".sum-label").textContent=text;
+  if(status){
+    var st=document.createElement("span");
+    st.className="sstat"+(status.tone?" "+status.tone:"");
+    st.innerHTML="<i></i>";
+    var sl=document.createElement("span"); sl.textContent=status.text;
+    st.appendChild(sl);
+    sum.appendChild(st);
+  }
+  var ch=document.createElement("span");
+  ch.className="chev"; ch.innerHTML=ICON.down;
+  sum.appendChild(ch);
+  return sum;
+}
+
 /* ---------- render ---------- */
+function statusTone(){
+  return sync.state==="ok"?"ok":sync.state==="err"?"err":sync.state==="busy"?"busy":"";
+}
 function paintChip(){
   var c=$("chip");
-  c.className="chip"+(sync.state==="ok"?" ok":sync.state==="err"?" err":sync.state==="busy"?" busy":"");
+  c.className="chip"+(statusTone()?" "+statusTone():"");
   $("chipText").textContent=sync.msg;
+  var ss=document.querySelector("#syncPanel .sstat");
+  if(ss){
+    ss.className="sstat"+(statusTone()?" "+statusTone():"");
+    ss.lastChild.textContent=sync.msg;
+  }
 }
 
 function renderHeader(){
@@ -716,9 +758,7 @@ function field(labelText,value,placeholder){
 
 function syncPanel(){
   var det=document.createElement("details"); det.id="syncPanel";
-  var sum=document.createElement("summary");
-  sum.innerHTML=ICON.cloud+"<span>Sync across devices"+(cfg?" — on":"")+"</span>";
-  det.appendChild(sum);
+  det.appendChild(summaryRow("cloud","Sync across devices",{tone:statusTone(),text:sync.msg}));
   var pad=document.createElement("div"); pad.className="dpad";
 
   var steps=document.createElement("ol"); steps.className="ol";
@@ -726,15 +766,23 @@ function syncPanel(){
     "<li>In Supabase, open <b>SQL Editor</b>, paste the block below, and run it. Once, ever.</li>"+
     "<li>Open <b>Project Settings → API</b>. Copy the <b>Project URL</b> and the <b>anon public</b> key into the fields below.</li>"+
     "<li>Press <b>Turn on sync</b>, then <b>Copy setup link</b> and open that link on your other devices.</li>";
-  pad.appendChild(steps);
-
   var sqlTa=document.createElement("textarea");
   sqlTa.value=SQL; sqlTa.readOnly=true; sqlTa.setAttribute("aria-label","Setup SQL");
-  pad.appendChild(sqlTa);
   var copySql=document.createElement("button");
   copySql.className="btn ghost"; copySql.type="button"; copySql.textContent="Copy the SQL";
   copySql.addEventListener("click",function(){ copy(sqlTa,copySql,"Copy the SQL"); });
-  pad.appendChild(copySql);
+
+  if(cfg){
+    /* setup is done - keep the one-time instructions out of the way */
+    var setup=document.createElement("details");
+    setup.appendChild(summaryRow("disk","Setup SQL",null));
+    var spad=document.createElement("div"); spad.className="dpad";
+    spad.appendChild(steps); spad.appendChild(sqlTa); spad.appendChild(copySql);
+    setup.appendChild(spad);
+    pad.appendChild(setup);
+  }else{
+    pad.appendChild(steps); pad.appendChild(sqlTa); pad.appendChild(copySql);
+  }
 
   var fUrl=field("Project URL",cfg?cfg.url:"","https://xxxx.supabase.co");
   var fKey=field("anon public key",cfg?cfg.anon:"","eyJhbGciOi…");
@@ -816,9 +864,7 @@ function renderEditTools(){
   box.appendChild(syncPanel());
 
   var det=document.createElement("details");
-  var sum=document.createElement("summary");
-  sum.innerHTML=ICON.disk+"<span>Backup &amp; restore</span>";
-  det.appendChild(sum);
+  det.appendChild(summaryRow("disk","Backup & restore",null));
   var pad=document.createElement("div"); pad.className="dpad";
   var snaps=snapshots();
   var sp=document.createElement("p");
@@ -873,7 +919,7 @@ function renderEditTools(){
   box.appendChild(det);
 
   var clr=document.createElement("button");
-  clr.className="btn ghost"; clr.type="button"; clr.textContent="Clear today's checkmarks";
+  clr.className="btn ghost danger"; clr.type="button"; clr.textContent="Clear today's checkmarks";
   clr.addEventListener("click",function(){
     if(confirm("Uncheck everything for today?")){ delete state.log[day]; save(); render(); }
   });
