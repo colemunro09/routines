@@ -1,10 +1,12 @@
 # Routines
 
 A daily habit checklist that installs to your phone's home screen and your computer's dock.
-One HTML file. No build step, no framework, no dependencies.
+One HTML file, plus an icon and a small offline worker. No build step, no framework, no
+dependencies.
 
 Check things off, and at midnight the list clears itself and the day gets filed into a
-running log. Optional sync through Supabase keeps every device on the same list.
+running log. Optional sync through Supabase keeps every device on the same list. Once it
+has loaded on a device it opens with no network at all.
 
 ## Using it
 
@@ -14,8 +16,19 @@ running log. Optional sync through Supabase keeps every device on the same list.
 - To reorder, drag a habit by the grip handle on its left. Drop it anywhere in either
   section — dragging one from Morning into Evening moves it there. With a keyboard,
   focus a handle and use the up and down arrow keys.
+- **Today** — one line about the day, under the list. It's filed with the day and shows up
+  again under that day in the stats view.
 - The bar chart at the bottom shows the last 14 days. The streak counts consecutive days
   at 100%; today only breaks it once the day is over.
+- A day is scored against the list as it stood that day. Adding or deleting a habit changes
+  today and leaves your history where it was.
+
+### Offline
+
+After the first load it keeps a copy of itself on the device, so it opens on a plane or in a
+tunnel — checkmarks and notes go to local storage and sync catches up next time there's a
+network. New versions arrive quietly: the app opens from its copy and fetches the update
+behind it, so a change lands on the *next* open after the one where it downloaded.
 
 ### Install it
 
@@ -94,6 +107,7 @@ Because your data lives in Supabase, replacing the HTML never touches your histo
 
 ## Data, in one place
 
-- **Supabase** — your list and your checkmarks.
+- **Supabase** — your list, your checkmarks, and your notes.
 - **This repo** — the app itself. No keys, no personal data.
 - **Your browser's local storage** — a working copy, plus your Supabase config.
+- **The device's cache** — a copy of the page, so it opens without a network.

@@ -6,7 +6,8 @@ Context for working on this repo. Read before editing `index.html`.
 
 A personal daily habit checklist, built for the owner. It installs to an iPhone home
 screen and a Mac dock, checkmarks reset at midnight, and the day rolls into a 14-day log
-with a streak counter. Optional Supabase sync keeps devices on the same list.
+with a streak counter. Each day can carry a one-line note. Optional Supabase sync keeps
+devices on the same list, and a service worker keeps it opening with no network.
 
 Live at https://colemunro09.github.io/routines/ — GitHub Pages serves `main` at the repo
 root. **Pushing to `main` deploys.** Redeploy takes about a minute.
@@ -15,11 +16,14 @@ root. **Pushing to `main` deploys.** Redeploy takes about a minute.
 
 - **One file.** `index.html` is the entire app: markup, CSS, and JS inline. No build step,
   no bundler, no framework, no npm, no dependencies. Do not introduce any. The whole point
-  is that it can be opened, edited, and re-hosted anywhere with no toolchain. The one companion
-  file is `icon.png` (180x180, the CM mark on black) — iOS ignores `rel="icon"` and data
-  URIs when adding to the home screen, so the touch icon has to be a real file next to
-  `index.html`. Nothing breaks if it's missing; the home screen just falls back to a
-  screenshot.
+  is that it can be opened, edited, and re-hosted anywhere with no toolchain. Two companion
+  files sit beside it, and both are optional in the sense that the app runs without either:
+  - `icon.png` (180x180, the CM mark on black) — iOS ignores `rel="icon"` and data URIs
+    when adding to the home screen, so the touch icon has to be a real file. Missing, the
+    home screen just falls back to a screenshot.
+  - `sw.js` — the offline shell, ~45 lines, no dependencies. It is registered only from a
+    secure origin that isn't `file:`, so a local copy or an Artifact preview skips it and
+    behaves exactly as the app did before it existed.
 - **No `<!doctype>`, `<html>`, `<head>`, or `<body>` tags** — the file opens with `<title>`
   and the font `<link>`. It renders fine as a standalone page and stays publishable as a
   Claude Artifact. Meta tags for iOS standalone mode are injected by JS at startup.
@@ -50,11 +54,17 @@ URL, anon key, or secret key. None of those are in the repo today; keep it that 
 
 ```js
 {
-  v: 2,
+  v: 3,
   quote: "…",        // line above the list
   midQuote: "…",     // line between the first and second section
   sections: [ { id, icon: "sun"|"moon", title, items: [ { id, label } ] } ],
-  log: { "2026-08-23": { itemId: 1, … } },   // per-day, per-item checkmarks
+  log: {
+    "2026-08-23": {
+      d: { itemId: 1, … },   // what was ticked
+      n: 7,                  // how many habits the list held that day
+      note: "…"              // optional, one line about the day
+    }
+  },
   mtime: 1755993600000                        // last local edit, drives sync merge
 }
 ```
@@ -65,9 +75,23 @@ row dragged between sections just changes which array it lands in — which is w
 row looks its item up (`sectionOf`) instead of closing over the section it was rendered in.
 
 `log` keys are **local** dates (`keyOf()`), never UTC — a checkmark belongs to the day the
-person experienced, not the day in Greenwich. Deleted items may leave stale ids in `log`;
-that's intentional and harmless, since completion is computed against items that currently
-exist.
+person experienced, not the day in Greenwich.
+
+**`n` is the point of v3 and must not be dropped.** Score a past day against today's list
+and the past changes every time the list does: add a habit this morning and a 6/6 Tuesday
+silently becomes 6/7, breaking a streak nobody broke. So:
+
+- **Today** is still moving. It scores against the list as it stands, `touchToday()` keeps
+  `n` current, and ticks belonging to a habit deleted mid-day go with it.
+- **A day that is over** scores against `n`, and its numerator is every tick it holds —
+  including ticks for habits since deleted, because the day was whole at the time. Stale
+  ids in `d` are now load-bearing, not just harmless.
+- A day with no record at all is 0 either way, so the missing `n` never matters.
+
+`migrate()` runs on load, on any doc pulled from Supabase, and on anything restored from a
+backup, so a v2 document can arrive from any of those doors and only get shaped once. It
+freezes `n` for old days at the list length it finds — the best guess left — and the result
+is written straight back to local storage so each device stamps it once, early.
 
 `save()` stamps `mtime` and schedules a push. `saveLocal()` writes without stamping — use
 it when applying a *remote* change, or you'll ping-pong.
@@ -118,8 +142,9 @@ theme's background — the classic bug here.
 
 Type: **Bricolage Grotesque** for the wordmark only, **IBM Plex Sans** for UI, **IBM Plex
 Mono** for dates, counts, section eyebrows, and anything tabular. Accent is a deep
-verdigris (`#0E6B5E` light, `#4FBFA8` dark) — the single accent, used for checks, progress,
-the streak, and the mid-list quote. Keep it to one.
+crimson (`#A31F34` light, `#FF3B4E` dark) — the single accent, used for checks, progress,
+the streak, and the mid-list quote. Keep it to one, and read it from `:root` rather than
+from this file, which has been wrong about it before.
 
 Tap targets are ≥54px tall. `prefers-reduced-motion` kills all transitions — don't add
 animation that ignores it.
@@ -137,11 +162,17 @@ animation that ignores it.
 
 ## Known gaps
 
-- **No offline support.** The page needs a network hit to load. A service worker (~30 lines,
-  a second file) would fix it — the intended next step, deferred until the app has been
-  used for a while.
 - No notifications, no widget. Both would require a native app.
+- **No haptics on iOS.** `toggle()` calls `navigator.vibrate`, which Android and desktop
+  honour and iOS Safari does not implement at all. There is no web API for it; the only
+  known workaround is making the real tap target an `<input type="checkbox" switch>`, which
+  is Safari-only, undocumented behaviour, and would mean rebuilding `checkRow` and its CSS.
+  Not worth it unless it's asked for.
 - Streak counts only 100% days. Partial days show in the bar chart but don't extend a streak.
+- Every habit is every day. There is no per-habit schedule, and this is deliberate — the
+  owner's list really is daily. Don't add one unasked.
+- Day notes are written on the list for today only; older notes show read-only in the stats
+  day detail. Editing one in place would need the detail to stop being an `innerHTML` blob.
 
 ## Verifying a change
 
@@ -155,3 +186,18 @@ Then open the file, and check: a row toggles and the header count follows; edit 
 renames, and dragging a row by its grip handle reorders it — within a section and across
 into the other one — and the change survives a reload; both themes are legible (flip the OS
 appearance); the layout holds at 375px wide.
+
+Opening `index.html` off the disk won't exercise the service worker — it needs an origin:
+
+```bash
+python3 -m http.server 8765
+```
+
+Two things about that worker will trip you up. It serves the cached copy first and fetches
+the new one behind it, so **an edit shows up on the second reload, not the first** — reload
+twice before believing a change didn't land. And to test offline properly, stop the server
+and reload; DevTools' offline checkbox is fine too. If you need a clean slate, unregister
+the worker and delete the `routines-v1` cache.
+
+Worth re-checking after anything that touches the log: add a habit and confirm the days
+behind it keep their percentages and the streak survives.

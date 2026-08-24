@@ -242,6 +242,14 @@ h1{
 .dd-mark svg{width:9px;height:9px;color:var(--accent-ink);opacity:0}
 .dd-item.on .dd-mark svg{opacity:1}
 .dd-mark path{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.dd-changed{
+  margin:10px 0 0;font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;color:var(--ink-3);line-height:1.45;
+}
+.dd-note{
+  margin:11px 0 0;padding-top:10px;border-top:1px solid var(--line-soft);
+  font-size:13.5px;font-style:italic;color:var(--ink-2);line-height:1.5;
+}
 
 /* ---------- habit by habit, over time ---------- */
 .byhabit{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-soft)}
@@ -388,6 +396,21 @@ body.dragging .erow input{pointer-events:none}
   font-size:14.5px;line-height:1.5;resize:vertical;min-height:64px;
 }
 
+/* ---------- a line about the day ---------- */
+.dnote{margin:4px 0 2px}
+.dnote label{
+  display:block;font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+  margin:0 0 7px 2px;
+}
+.dnote input{
+  width:100%;height:54px;padding:0 13px;
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:10px;
+  font-size:14.5px;line-height:1.4;color:var(--ink);
+}
+.dnote input::placeholder{color:var(--ink-3);font-style:italic}
+.dnote input:focus{outline:none;border-color:var(--accent)}
+
 .tools{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 .btn{
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -481,6 +504,7 @@ details[open] summary .chev{transform:rotate(180deg)}
   <div id="stats" hidden></div>
   <div id="quoteHost"></div>
   <div id="sections"></div>
+  <div class="dnote" id="dayNote" hidden></div>
   <div id="editTools"></div>
   <div class="log" id="log"></div>
   <p class="note" id="note"></p>
@@ -506,6 +530,16 @@ details[open] summary .chev{transform:rotate(180deg)}
   t.content=m[1];
 });
 
+/* ---------- offline shell ---------- */
+/* Needs a secure origin, which https and localhost are and a file:// copy is
+   not. Anywhere it can't register - a local copy, an Artifact preview - the app
+   behaves exactly as it did before there was a worker. */
+if(navigator.serviceWorker && window.isSecureContext && location.protocol!=="file:"){
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+
 var KEY="routines.v1", CFGKEY="routines.cfg", PENDKEY="routines.pending";
 var storageOK=true, memory={};
 try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); }catch(e){ storageOK=false; }
@@ -522,7 +556,7 @@ function secret(){
 }
 
 var DEFAULT={
-  v:2,
+  v:3,
   quote:"Write your own line here — tap Edit list to change it.",
   midQuote:"A line between morning and evening.",
   sections:[
@@ -538,13 +572,42 @@ var DEFAULT={
 };
 
 /* ---------- load local doc ---------- */
+/* v3 turns each logged day from a flat map of ticked ids into { d, n, note }.
+   `n` is how many habits the list held that day. Without it every day is scored
+   against today's list, so adding a habit this morning quietly rewrites the past
+   - a 6/6 Tuesday becomes 6/7 and breaks a streak nobody actually broke. */
+function itemsOf(doc){
+  return (doc.sections||[]).reduce(function(a,s){ return a.concat(s.items||[]); },[]);
+}
+function migrate(doc){
+  if(!doc||!doc.sections) return doc;
+  if(!doc.log) doc.log={};
+  if((doc.v||2)<3){
+    /* the old days never recorded a count; the list as it stands is the closest
+       thing to the truth left, and freezing it now stops the drift from here. */
+    var n=itemsOf(doc).length;
+    Object.keys(doc.log).forEach(function(k){
+      var rec=doc.log[k];
+      if(!rec||typeof rec!=="object"){ delete doc.log[k]; return; }
+      if(!rec.d) doc.log[k]={d:rec,n:n};
+    });
+    doc.v=3;
+  }
+  return doc;
+}
+
 var state;
 try{ state=JSON.parse(lsGet(KEY)||"null"); }catch(e){ state=null; }
 if(!state) state=JSON.parse(JSON.stringify(DEFAULT));
 if(!state.log) state.log={};
 if(!state.mtime) state.mtime=0;
-if(!state.v) state.v=2;
 if(typeof state.midQuote!=="string") state.midQuote="";
+/* stamp the migration down straight away, so the day counts it freezes are the
+   ones this device sees now and not whatever the list has grown into by the
+   first edit. Not a user edit, so mtime stays where it is. */
+var wasV=state.v;
+migrate(state);
+if(state.v!==wasV) saveLocal();
 var editing=false;
 
 /* ---------- sync config ---------- */
@@ -630,7 +693,7 @@ function pull(){
   setSync("busy","Syncing…");
   return rpc("routines_get",{k:cfg.key}).then(function(remote){
     var before=JSON.stringify(state);
-    state=mergeDocs(state,remote);
+    state=mergeDocs(state,migrate(remote));
     saveLocal();
     markClean();
     if(JSON.stringify(state)!==before) render();
@@ -677,15 +740,25 @@ function keyOf(d){
 function today(){ return keyOf(new Date()); }
 var day=today();
 
-function allItems(){ return state.sections.reduce(function(a,s){ return a.concat(s.items); },[]); }
+function allItems(){ return itemsOf(state); }
+/* Today is still moving, so it scores against the list as it stands. A day that
+   is over scores against the list as it stood - every tick it holds counts,
+   including ticks for habits since deleted, because the day was whole then. */
 function doneOn(k){
-  var rec=state.log[k]||{}, items=allItems(), n=0;
-  items.forEach(function(it){ if(rec[it.id]) n++; });
-  return {done:n,total:items.length};
+  var rec=state.log[k], items=allItems(), n=0;
+  if(!rec) return {done:0,total:items.length};
+  var d=rec.d||{};
+  if(k===today()||typeof rec.n!=="number"){
+    items.forEach(function(it){ if(d[it.id]) n++; });
+    return {done:n,total:items.length};
+  }
+  n=Object.keys(d).length;
+  return {done:n,total:Math.max(rec.n,n)};
 }
 function pctOn(k){ var d=doneOn(k); return d.total? d.done/d.total : 0; }
-function isDone(id){ return !!(state.log[day]&&state.log[day][id]); }
-function isDoneOn(k,id){ return !!(state.log[k]&&state.log[k][id]); }
+function isDone(id){ return isDoneOn(day,id); }
+function isDoneOn(k,id){ return !!(state.log[k]&&state.log[k].d&&state.log[k].d[id]); }
+function noteOn(k){ var rec=state.log[k]; return (rec&&rec.note)||""; }
 var STREAK_MIN=3;
 function itemStreak(id){
   var n=0, cursor=new Date();
@@ -720,11 +793,43 @@ function itemStats(id,keys){
 function namedItems(sec){
   return sec.items.filter(function(it){ return it.label.trim()!==""; });
 }
+/* iOS has no web haptics API of any kind, so this reaches Android and desktop
+   only. It costs one line and does nothing anywhere it isn't supported. */
+function buzz(pattern){
+  if(!navigator.vibrate) return;
+  try{ navigator.vibrate(pattern); }catch(e){}
+}
+
+/* Today's record follows the list while the day is live: ticks belonging to a
+   habit that was just deleted go with it, and the count is kept current so the
+   day freezes at the right denominator when midnight rolls it into the log. */
+function touchToday(){
+  var rec=state.log[day];
+  if(!rec) return;
+  var live={}, has={};
+  allItems().forEach(function(it){ has[it.id]=1; });
+  Object.keys(rec.d||{}).forEach(function(id){ if(has[id]) live[id]=1; });
+  rec.d=live;
+  rec.n=allItems().length;
+  if(!Object.keys(live).length && !(rec.note||"").trim()) delete state.log[day];
+}
+function dayRec(){
+  var rec=state.log[day];
+  if(!rec) rec=state.log[day]={d:{},n:allItems().length};
+  if(!rec.d) rec.d={};
+  return rec;
+}
 function toggle(id){
-  if(!state.log[day]) state.log[day]={};
-  if(state.log[day][id]) delete state.log[day][id];
-  else state.log[day][id]=1;
-  if(!Object.keys(state.log[day]).length) delete state.log[day];
+  var rec=dayRec();
+  if(rec.d[id]) delete rec.d[id];
+  else rec.d[id]=1;
+  touchToday();
+  save();
+  buzz(pctOn(day)>=1? [14,55,14] : 9);
+}
+function setNote(text){
+  dayRec().note=text;
+  touchToday();
   save();
 }
 
@@ -895,7 +1000,6 @@ function checkRow(it){
       var sec=state.sections.filter(function(s){ return s.items.some(function(x){return x.id===it.id;}); })[0];
       if(sec) cnt.textContent=sec.items.filter(function(x){ return isDone(x.id); }).length+"/"+sec.items.length;
     }
-    if(navigator.vibrate) navigator.vibrate(8);
   });
   return b;
 }
@@ -1065,7 +1169,7 @@ function startDrag(e,el){
   document.addEventListener("pointercancel",onDragEnd);
   drag.raf=requestAnimationFrame(edgeScroll);
   place();
-  if(navigator.vibrate) navigator.vibrate(6);
+  buzz(6);
 }
 
 /* the handle keeps the keyboard path the arrow buttons used to provide */
@@ -1238,7 +1342,7 @@ function renderEditTools(){
         var next=JSON.parse(sn.body);
         if(!next.sections) throw new Error("bad");
         next.log=state.log;
-        state=next;
+        state=migrate(next);
         save(); editing=false; render();
       }catch(e){ alert("That copy could not be read."); }
     });
@@ -1266,7 +1370,7 @@ function renderEditTools(){
     try{
       var next=JSON.parse(ta.value);
       if(!next.sections) throw new Error("bad");
-      state=next; if(!state.log) state.log={};
+      state=migrate(next);
       save(); editing=false; render();
     }catch(e){ alert("That text isn't a valid copy — check that you pasted the whole thing."); }
   });
@@ -1358,6 +1462,14 @@ function dayDetail(k){
         '<span class="dd-mark">'+ICON.check+'</span><span>'+esc(it.label)+'</span></div>';
     });
   });
+  var shown=0;
+  state.sections.forEach(function(sec){ shown+=namedItems(sec).length; });
+  if(shown!==t.total){
+    h+='<p class="dd-changed">The list has changed since then \u2014 '+t.total+
+      ' habit'+(t.total===1?"":"s")+' that day.</p>';
+  }
+  var note=noteOn(k);
+  if(note.trim()) h+='<p class="dd-note">'+esc(note)+'</p>';
   return h+'</div>';
 }
 
@@ -1468,6 +1580,27 @@ function renderStats(){
   $("stats").innerHTML=h;
 }
 
+/* One line about the day, kept with the day. The field is built once and then
+   left alone - rebuilding it on every render would yank the caret out mid-word. */
+function renderDayNote(){
+  var host=$("dayNote");
+  if(editing){ host.hidden=true; return; }
+  host.hidden=false;
+  var i=host.querySelector("input");
+  if(i){
+    if(document.activeElement!==i) i.value=noteOn(day);
+    return;
+  }
+  var l=document.createElement("label");
+  l.textContent="Today";
+  i=document.createElement("input");
+  i.type="text"; i.value=noteOn(day); i.placeholder="A line about today";
+  i.maxLength=140; i.autocomplete="off";
+  l.setAttribute("for", i.id="f_"+uid());
+  i.addEventListener("input",function(){ setNote(i.value); });
+  host.appendChild(l); host.appendChild(i);
+}
+
 function renderNote(){
   var n=$("note");
   if(!storageOK){
@@ -1485,14 +1618,14 @@ function renderNote(){
 function render(){
   if(drag) stopDrag(false);
   var onStats = view==="stats";
-  ["wordmark","meter","quoteHost","sections","editTools","log","note","fab"].forEach(function(id){
+  ["wordmark","meter","quoteHost","sections","dayNote","editTools","log","note","fab"].forEach(function(id){
     $(id).hidden = onStats;
   });
   $("back").hidden = !onStats;
   $("stats").hidden = !onStats;
   renderHeader();
   if(onStats){ renderStats(); return; }
-  renderQuote(); renderSections(); renderEditTools(); renderLog(); renderNote();
+  renderQuote(); renderSections(); renderDayNote(); renderEditTools(); renderLog(); renderNote();
   $("fabLabel").textContent = editing? "Done" : "Edit list";
   $("fab").classList.toggle("on", editing);
   $("fab").querySelector("svg").innerHTML = editing
@@ -1507,6 +1640,7 @@ function endEdit(){
   });
   state.sections=state.sections.filter(function(s){ return s.items.length||s.title.trim(); });
   editing=false;
+  touchToday();
   save();
 }
 
