@@ -1,4 +1,5 @@
 <title>Daily Routines</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzEiIGZpbGw9IiMxNzU0OEYiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIuNCIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0ic3F1YXJlIj48cGF0aCBkPSJNMjIuNiAzNyBMMzIgMTQuNSBMNDEuNCAzNyIvPjxwYXRoIGQ9Ik0yNS45IDI5LjQgSDM4LjEiLz48cGF0aCBkPSJNMjIuNiAzNyBWNTEuNSIvPjxwYXRoIGQ9Ik0yMi42IDM3IEgyOC40IEE0LjEgNC4xIDAgMCAxIDI4LjQgNDUuMiBIMjIuNiIvPjxwYXRoIGQ9Ik0zNi40IDM3IFY1MS41Ii8+PHBhdGggZD0iTTM2LjQgNTEuNSBINDMuNiIvPjwvZz48L3N2Zz4=">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -168,6 +169,12 @@ h1{
 .row[aria-pressed="true"] .box path{stroke-dashoffset:0}
 .row:active .box{transform:scale(.9)}
 .label{font-size:16px;transition:color .18s ease}
+.hstreak{
+  margin-left:auto;flex:none;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;
+  font-variant-numeric:tabular-nums;color:var(--ink-3);
+}
+.row[aria-pressed="true"] .hstreak{color:var(--accent)}
 .row[aria-pressed="true"] .label{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1px}
 
 /* ---------- log ---------- */
@@ -236,13 +243,13 @@ details[open] summary{border-bottom:1px solid var(--line-soft)}
 .dpad p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.5}
 .dpad p.hint{font-size:12px;color:var(--ink-3)}
 .dpad label{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
-.dpad input,.dpad textarea{
+.dpad input,.dpad textarea,.dpad select{
   width:100%;background:var(--surface-2);border:1px solid var(--line-soft);
   border-radius:9px;padding:10px;font-family:"IBM Plex Mono",ui-monospace,monospace;
   font-size:11.5px;resize:vertical;
 }
 .dpad textarea{min-height:110px}
-.dpad input:focus,.dpad textarea:focus{outline:none;border-color:var(--accent)}
+.dpad input:focus,.dpad textarea:focus,.dpad select:focus{outline:none;border-color:var(--accent)}
 .field{display:flex;flex-direction:column;gap:5px}
 .ol{margin:0;padding-left:18px;font-size:13px;color:var(--ink-2);line-height:1.6}
 .ol li{margin-bottom:6px}
@@ -426,6 +433,7 @@ function pull(){
     var before=JSON.stringify(state);
     state=mergeDocs(state,remote);
     saveLocal();
+    markClean();
     if(JSON.stringify(state)!==before) render();
     setSync("ok","Synced");
     if(!remote||(state.mtime||0)>(remote.mtime||0)) return push();
@@ -436,7 +444,32 @@ function pull(){
 }
 
 function saveLocal(){ lsSet(KEY,JSON.stringify(state)); }
-function save(){ state.mtime=Date.now(); saveLocal(); schedulePush(); }
+
+/* automatic local snapshots, taken just before a structural edit */
+var SNAPKEY="routines.snaps", SNAPMAX=20, SNAPGAP=90000;
+function stamp(t){
+  var d=new Date(t), M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var hh=String(d.getHours()).padStart(2,"0"), mm=String(d.getMinutes()).padStart(2,"0");
+  return (keyOf(d)===today()? "Today" : M[d.getMonth()]+" "+d.getDate())+" "+hh+":"+mm;
+}
+function snapshots(){ try{ return JSON.parse(lsGet(SNAPKEY)||"[]"); }catch(e){ return []; } }
+function structOf(s){ return JSON.stringify({q:s.quote,m:s.midQuote,sec:s.sections}); }
+var prevDoc=null, prevStruct=null;
+function markClean(){ prevDoc=JSON.stringify(state); prevStruct=structOf(state); }
+function snapshotPush(body){
+  var list=snapshots();
+  if(list.length && (Date.now()-list[0].t)<SNAPGAP) return;
+  if(list.length && list[0].body===body) return;
+  list.unshift({t:Date.now(),body:body});
+  if(list.length>SNAPMAX) list.length=SNAPMAX;
+  lsSet(SNAPKEY,JSON.stringify(list));
+}
+function save(){
+  var st=structOf(state);
+  if(prevStruct!==null && st!==prevStruct && prevDoc) snapshotPush(prevDoc);
+  state.mtime=Date.now(); saveLocal(); schedulePush();
+  markClean();
+}
 
 /* ---------- dates ---------- */
 function keyOf(d){
@@ -453,6 +486,17 @@ function doneOn(k){
 }
 function pctOn(k){ var d=doneOn(k); return d.total? d.done/d.total : 0; }
 function isDone(id){ return !!(state.log[day]&&state.log[day][id]); }
+function isDoneOn(k,id){ return !!(state.log[k]&&state.log[k][id]); }
+var STREAK_MIN=3;
+function itemStreak(id){
+  var n=0, cursor=new Date();
+  if(!isDoneOn(today(),id)) cursor.setDate(cursor.getDate()-1);
+  for(var g=0;g<400;g++){
+    if(isDoneOn(keyOf(cursor),id)){ n++; cursor.setDate(cursor.getDate()-1); }
+    else break;
+  }
+  return n;
+}
 function toggle(id){
   if(!state.log[day]) state.log[day]={};
   if(state.log[day][id]) delete state.log[day][id];
@@ -579,11 +623,19 @@ function checkRow(it){
   var b=document.createElement("button");
   b.className="row"; b.type="button";
   b.setAttribute("aria-pressed", isDone(it.id)?"true":"false");
-  b.innerHTML='<span class="box">'+ICON.check+'</span><span class="label"></span>';
+  b.innerHTML='<span class="box">'+ICON.check+'</span><span class="label"></span><span class="hstreak"></span>';
   b.querySelector(".label").textContent=it.label;
+  var hs=b.querySelector(".hstreak");
+  function paintStreak(){
+    var n=itemStreak(it.id);
+    hs.textContent = n>=STREAK_MIN ? n+"d" : "";
+    hs.title = n>=STREAK_MIN ? n+" days in a row" : "";
+  }
+  paintStreak();
   b.addEventListener("click",function(){
     toggle(it.id);
     b.setAttribute("aria-pressed", isDone(it.id)?"true":"false");
+    paintStreak();
     renderHeader(); renderLog();
     var card=b.closest(".sec"), cnt=card.querySelector(".sec-count");
     if(cnt){
@@ -767,8 +819,42 @@ function renderEditTools(){
   sum.innerHTML=ICON.disk+"<span>Backup &amp; restore</span>";
   det.appendChild(sum);
   var pad=document.createElement("div"); pad.className="dpad";
+  var snaps=snapshots();
+  var sp=document.createElement("p");
+  sp.textContent = snaps.length
+    ? "Saved automatically just before each edit to the list. The newest is first."
+    : "Nothing saved yet \u2014 a copy is kept automatically the first time you edit the list.";
+  pad.appendChild(sp);
+  if(snaps.length){
+    var sel=document.createElement("select");
+    sel.setAttribute("aria-label","Saved copies");
+    snaps.forEach(function(sn,i){
+      var o=document.createElement("option");
+      o.value=String(i);
+      var doc=null; try{ doc=JSON.parse(sn.body); }catch(e){}
+      var n=doc&&doc.sections? doc.sections.reduce(function(a,x){ return a+x.items.length; },0) : 0;
+      o.textContent=stamp(sn.t)+"  ("+n+" items)";
+      sel.appendChild(o);
+    });
+    pad.appendChild(sel);
+    var sb=document.createElement("button");
+    sb.className="btn ghost"; sb.type="button"; sb.textContent="Restore the copy above";
+    sb.addEventListener("click",function(){
+      var sn=snapshots()[Number(sel.value)];
+      if(!sn) return;
+      if(!confirm("Roll the list back to "+stamp(sn.t)+"? Today\u2019s checkmarks are kept.")) return;
+      try{
+        var next=JSON.parse(sn.body);
+        if(!next.sections) throw new Error("bad");
+        next.log=state.log;
+        state=next;
+        save(); editing=false; render();
+      }catch(e){ alert("That copy could not be read."); }
+    });
+    pad.appendChild(sb);
+  }
   var p=document.createElement("p");
-  p.textContent="A copy of everything, as text. Paste an old backup in and press Restore to roll back.";
+  p.textContent="Or keep your own copy as text. Paste one back in and press Restore to roll back.";
   var ta=document.createElement("textarea");
   ta.value=JSON.stringify(state); ta.setAttribute("aria-label","Backup data");
   var rb=document.createElement("button");
@@ -875,6 +961,7 @@ document.addEventListener("visibilitychange",function(){
 });
 window.addEventListener("focus",function(){ pull(); });
 
+markClean();
 if(cfg) setSync("busy","Syncing…");
 render();
 if(cfg) pull();
