@@ -692,13 +692,27 @@ function pull(){
   pulling=true;
   setSync("busy","Syncing…");
   return rpc("routines_get",{k:cfg.key}).then(function(remote){
+    /* Nothing stored under this key is expected exactly once - on the device that
+       minted it. Anywhere else it means the key is not the one holding the list,
+       and it was the push right here that used to turn that mistake into a second
+       row and still report "Synced". Say so, and send nothing. */
+    if(!remote||!remote.sections){
+      if(!cfg.mint){
+        setSync("err","No list on that key");
+        sync.detail="Nothing is stored under this secret key, so nothing was uploaded from here. Check it matches the device that has your list, character for character.";
+        return;
+      }
+      delete cfg.mint; lsSet(CFGKEY,JSON.stringify(cfg));
+      setSync("ok","Synced");
+      return push();
+    }
     var before=JSON.stringify(state);
     state=mergeDocs(state,migrate(remote));
     saveLocal();
     markClean();
     if(JSON.stringify(state)!==before) render();
     setSync("ok","Synced");
-    if(!remote||(state.mtime||0)>(remote.mtime||0)) return push();
+    if((state.mtime||0)>(remote.mtime||0)) return push();
   }).catch(function(err){
     setSync("err","Sync error");
     sync.detail=String(err.message||err);
@@ -1208,6 +1222,7 @@ function syncPanel(){
     var steps=document.createElement("ol"); steps.className="ol";
     steps.innerHTML=
       "<li>Open <b>Project Settings → API</b>. Copy the <b>Project URL</b> and the <b>anon public</b> key into the fields below.</li>"+
+      "<li>Press <b>Generate a new key</b>. That key is the whole login, and only your first device should ever mint one.</li>"+
       "<li>Press <b>Turn on sync</b>, then <b>Copy setup link</b> and open that link on your other devices. "+
       "The link carries the project, not your secret key — paste that once on each device, from <b>Copy secret key</b>.</li>";
     pad.appendChild(steps);
@@ -1215,29 +1230,50 @@ function syncPanel(){
 
   var fUrl=field("Project URL",cfg?cfg.url:(pending?pending.url:""),"https://xxxx.supabase.co");
   var fKey=field("anon public key",cfg?cfg.anon:(pending?pending.anon:""),"eyJhbGciOi…");
-  var fSec=field("Your secret key",cfg?cfg.key:"",pending?"paste the same key as your first device":"");
-  /* a fresh setup mints a key. a device arriving on a setup link must NOT -
-     the key is the row it reads, so a new one would quietly start a second list. */
-  if(!cfg&&!pending) fSec.input.value=secret();
+  var fSec=field("Your secret key",cfg?cfg.key:"","paste the key from your other device");
   if(!cfg&&!pending&&/supabase\.co$/i.test(location.hostname)) fUrl.input.value=location.origin;
   pad.appendChild(fUrl); pad.appendChild(fKey); pad.appendChild(fSec);
 
   var hint=document.createElement("p"); hint.className="hint";
-  hint.textContent=pending
-    ? "Open the sync panel on the device you set up first, press Copy secret key, and paste it here. It has to match exactly — a different key starts a separate, empty list."
-    : "The secret key is the whole login. The setup link no longer carries it, so keep the key itself out of anywhere public and this list stays yours.";
+  hint.textContent=cfg
+    ? "The secret key is the whole login. The setup link no longer carries it, so keep the key itself out of anywhere public and this list stays yours."
+    : "Paste the secret key from a device you have already set up — it has to match exactly, or this device quietly starts a separate, empty list. Generate one only if this is your first device.";
   pad.appendChild(hint);
+
+  /* The key is the row this device reads, so nothing fills it in for you. A device
+     that invents one behind your back gets an empty row, reports "Synced", and
+     pushes the starter list into it - which is exactly how a second list is born.
+     Minting is now a button you have to mean to press, and it is absent entirely
+     when `pending` says this device arrived from another one that already has a key. */
+  var minted="";
+  if(!cfg&&!pending){
+    var mint=document.createElement("button");
+    mint.className="btn ghost"; mint.type="button"; mint.textContent="Generate a new key";
+    mint.addEventListener("click",function(){
+      if(fSec.input.value.trim()&&!confirm("Replace the key in the field with a brand new one? A new key starts an empty list — only your first device should mint one.")) return;
+      fSec.input.value=minted=secret();
+      fSec.input.focus();
+    });
+    pad.appendChild(mint);
+  }
 
   var on=document.createElement("button");
   on.className="btn primary"; on.type="button";
   on.textContent=cfg?"Save and sync now":(pending?"Finish setup":"Turn on sync");
   on.addEventListener("click",function(){
     var u=fUrl.input.value.trim().replace(/\/+$/,""), a=fKey.input.value.trim(), k=fSec.input.value.trim();
-    if(!/^https?:\/\//.test(u)||!a||!k){
-      alert(pending?"Paste the secret key from the device you set up first.":"Fill in the project URL, the anon key, and a secret key.");
+    if(!/^https?:\/\//.test(u)||!a){
+      alert("Fill in the project URL and the anon public key from Project Settings → API.");
+      return;
+    }
+    if(!k){
+      alert(cfg?"The secret key can’t be empty."
+               :"Paste the secret key from a device you have already set up — or press Generate a new key if this is your first device.");
       return;
     }
     cfg={url:u,anon:a,key:k};
+    /* only the device that minted the key may find an empty row and not be alarmed */
+    if(k&&k===minted) cfg.mint=1;
     lsSet(CFGKEY,JSON.stringify(cfg));
     pending=null; lsDel(PENDKEY);
     saveLocal();

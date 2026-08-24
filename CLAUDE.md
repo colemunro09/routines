@@ -115,9 +115,25 @@ hash is public the moment the link is; don't put the key back in it.
 Links made before this change did carry the key, and `readHash()` still honours them so
 existing devices keep working. That's a compatibility ramp, not a design goal.
 
-The panel prefills a freshly minted `secret()` **only** when there is no config and nothing
-pending. A device arriving on a setup link must get an empty field — minting a key there
-silently creates a second row and the two devices never sync, with no error shown.
+**The key field is never prefilled.** `secret()` is called from one place only — the
+**Generate a new key** button, shown while there is no config. The panel used to mint a key
+automatically for any device with no config and nothing pending, which meant a second device
+set up by hand rather than by setup link silently got a key of its own: a second row, a
+starter list pushed into it, and a cheerful "Synced". Don't reintroduce a prefill: an
+unconfigured device cannot know whether it is the first one, so it must assume it isn't.
+
+An empty row is only ever expected on the device that minted the key, so `cfg.mint` is set
+when the key came from that button and cleared after the first successful push. `pull()`
+reads it: finding nothing under the key on any *other* device is reported as "No list on
+that key" and **nothing is sent**. That push was the second half of the original bug — it
+turned a mistyped key into a real second row and then said "Synced". A later local edit will
+still create the row via `schedulePush()`; that's deliberate, so a device whose row was
+deleted can recover instead of being stuck.
+
+The button itself is hidden when `pending` is set. A device that arrived on a setup link has
+positive evidence that another device already holds the key, so offering to mint one there
+would contradict the hint right above it. A device with no config *and* no pending setup is
+the only place a key can be born.
 
 Merge is last-write-wins on the document by `mtime`, **except** `log`, which merges at the
 day level (`Object.assign({}, older.log, newer.log)`). That way a morning checked off on a

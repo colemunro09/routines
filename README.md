@@ -42,7 +42,8 @@ same list and the same checkmarks appear everywhere.
 
 1. In your Supabase project, open the **SQL Editor** and run the block below.
 2. Open the app, then **Edit list → Sync across devices**. Paste your **Project URL** and
-   **anon public** key from *Project Settings → API*. A secret key is generated for you.
+   **anon public** key from *Project Settings → API*, then press **Generate a new key**.
+   Do this on your first device only — every other device pastes that same key in step 4.
 3. Press **Turn on sync**, then **Copy setup link**, and open that link on your other
    devices. The link carries the project URL and anon key, applies them, and removes itself
    from the address bar.
