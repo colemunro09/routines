@@ -1,6 +1,7 @@
 <meta charset="utf-8">
 <title>Daily Routines</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgOTAwIj48Y2lyY2xlIGN4PSI0NTAiIGN5PSI0NTAiIHI9IjQ0MCIgZmlsbD0iIzAwMCIvPjxnIGZpbGw9IiNmZmYiPjxyZWN0IHg9IjE4MCIgeT0iMjk3IiB3aWR0aD0iNjIiIGhlaWdodD0iMzAxIi8+PHJlY3QgeD0iMjY3IiB5PSIyOTciIHdpZHRoPSIxNDUiIGhlaWdodD0iNzMiLz48cmVjdCB4PSIyNjciIHk9IjUyNSIgd2lkdGg9IjE0NSIgaGVpZ2h0PSI3MyIvPjxyZWN0IHg9IjQ1MiIgeT0iMjk3IiB3aWR0aD0iNjIiIGhlaWdodD0iMzAxIi8+PHJlY3QgeD0iNTU0IiB5PSIyOTciIHdpZHRoPSI2MiIgaGVpZ2h0PSIyNDAiLz48cmVjdCB4PSI2NTYiIHk9IjI5NyIgd2lkdGg9IjYyIiBoZWlnaHQ9IjMwMSIvPjwvZz48L3N2Zz4=">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgOTAwIj48Y2lyY2xlIGN4PSI0NTAiIGN5PSI0NTAiIHI9IjQ0MCIgZmlsbD0iIzAwMCIvPjxnIGZpbGw9IiNmZmYiPjxyZWN0IHg9IjIzOCIgeT0iMjA5IiB3aWR0aD0iOTkiIGhlaWdodD0iNDgyIi8+PHJlY3QgeD0iNDAwIiB5PSIyMDkiIHdpZHRoPSI5OSIgaGVpZ2h0PSIzODQiLz48cmVjdCB4PSI1NjQiIHk9IjIwOSIgd2lkdGg9Ijk5IiBoZWlnaHQ9IjQ4MiIvPjwvZz48L3N2Zz4=">
+<link rel="apple-touch-icon" href="icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -21,6 +22,7 @@
   --danger:#9A5B00;
   --shadow:0 1px 2px rgba(11,11,13,.06), 0 8px 24px -16px rgba(11,11,13,.30);
   --r:14px;
+  color-scheme:light dark;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
@@ -39,7 +41,9 @@
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -18px rgba(0,0,0,.8);
   }
 }
+:root[data-theme="light"]{ color-scheme:light; }
 :root[data-theme="dark"]{
+  color-scheme:dark;
   --paper:#0B0B0D;
   --surface:#151517;
   --surface-2:#1C1C1F;
@@ -56,6 +60,7 @@
 }
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{
   margin:0;
   background:var(--paper);
@@ -88,6 +93,13 @@ h1{
   font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
   font-weight:700;font-size:26px;line-height:1;letter-spacing:-.02em;margin:0;
 }
+.back{
+  display:flex;align-items:center;gap:3px;
+  background:none;border:0;padding:0;margin:0;cursor:pointer;color:var(--ink);
+  font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+  font-weight:700;font-size:26px;line-height:1;letter-spacing:-.02em;
+}
+.back svg{width:21px;height:21px;flex:none;margin-left:-5px;color:var(--accent)}
 .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .date{
   font-family:"IBM Plex Mono",ui-monospace,monospace;
@@ -185,11 +197,139 @@ h1{
 .streak{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
 .streak b{color:var(--accent);font-weight:500}
 .dots{display:flex;gap:6px;align-items:flex-end}
-.day{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
-.bar{width:100%;height:34px;border-radius:5px;background:var(--line-soft);position:relative;overflow:hidden}
+.day{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:none;border:0;padding:0;font:inherit;cursor:pointer;
+}
+.bar{display:block;width:100%;height:34px;border-radius:5px;background:var(--line-soft);position:relative;overflow:hidden}
 .bar span{position:absolute;left:0;right:0;bottom:0;background:var(--accent);border-radius:5px;transition:height .4s ease}
-.day.today .bar{box-shadow:0 0 0 1.5px var(--accent)}
+/* Tint the track rather than ring the bar: an outline adds its width to every
+   side, which doubles a 3px all-time bar and makes today look nothing like the
+   rest of the chart. Selected wins over today, so it comes second. */
+.day.today .bar{background:var(--accent-soft)}
+.day[aria-pressed="true"] .bar{background:var(--ink-3)}
 .dow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;color:var(--ink-3);letter-spacing:.04em}
+.day.today .dow{color:var(--accent)}
+.day[aria-pressed="true"] .dow{color:var(--ink)}
+
+/* ---------- one day, habit by habit ---------- */
+.daydetail{
+  margin-top:14px;padding:12px 13px;border-radius:11px;
+  background:var(--surface-2);border:1px solid var(--line-soft);
+}
+.dd-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:11px}
+.dd-date{font-size:13.5px;font-weight:500}
+.dd-count{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink-2);
+}
+.dd-sec{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+  margin:11px 0 5px;
+}
+.dd-sec:first-of-type{margin-top:0}
+.dd-item{display:flex;align-items:center;gap:9px;padding:3px 0;font-size:14px;color:var(--ink-3)}
+.dd-item.on{color:var(--ink)}
+.dd-mark{
+  flex:none;width:15px;height:15px;border-radius:5px;
+  border:1.4px solid var(--line);display:grid;place-items:center;
+}
+.dd-item.on .dd-mark{background:var(--accent);border-color:var(--accent)}
+.dd-mark svg{width:9px;height:9px;color:var(--accent-ink);opacity:0}
+.dd-item.on .dd-mark svg{opacity:1}
+.dd-mark path{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- habit by habit, over time ---------- */
+.byhabit{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-soft)}
+.bh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.ranges{display:flex;gap:4px}
+.rbtn{
+  border:1px solid var(--line-soft);background:none;border-radius:7px;
+  padding:5px 9px;cursor:pointer;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;letter-spacing:.06em;color:var(--ink-3);
+}
+.rbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.bh-empty{margin:10px 0 0;font-size:13px;color:var(--ink-3);line-height:1.5}
+.bh-sec{display:flex;align-items:center;gap:8px;margin:16px 0 6px}
+.bh-sec-name{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+}
+.bh-sec .rule{flex:1;height:1px;background:var(--line-soft)}
+.bh-sec-pct{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11px;font-variant-numeric:tabular-nums;color:var(--ink-2);
+}
+.bh-note{
+  margin:0 0 13px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.05em;color:var(--ink-3);
+}
+.bh-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.bh-label{font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.strip{flex:none;display:flex;gap:2px;width:112px;height:18px}
+.strip i{
+  flex:1;min-width:0;border-radius:2px;background:var(--line-soft);
+  position:relative;overflow:hidden;
+}
+.strip i span{position:absolute;left:0;right:0;bottom:0;background:var(--accent);border-radius:2px}
+.bh-pct{
+  flex:none;width:34px;text-align:right;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink-2);
+}
+
+/* ---------- analytics page ---------- */
+.log-more{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;margin-top:15px;padding:11px 12px;
+  border:1px solid var(--line-soft);border-radius:10px;background:none;cursor:pointer;
+  font-size:13.5px;font-weight:500;color:var(--ink-2);
+}
+.log-more:hover{border-color:var(--ink-3);color:var(--ink)}
+.log-more svg{width:14px;height:14px;color:var(--ink-3)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0 18px}
+.tile{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:13px 8px;text-align:center;
+}
+.tile b{
+  display:block;line-height:1.1;font-weight:500;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:22px;font-variant-numeric:tabular-nums;color:var(--accent);
+}
+.tile span{
+  display:block;margin-top:6px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+}
+.card{
+  padding:16px;margin-bottom:16px;
+  border:1px solid var(--line-soft);border-radius:var(--r);background:var(--surface);
+}
+.chart{display:flex;align-items:flex-end;margin-bottom:9px}
+.chart .day{gap:0;min-width:0}
+.chart .bar{height:62px;border-radius:4px}
+.chart .bar span{border-radius:4px}
+.span-note{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.06em;color:var(--ink-3);text-align:center;
+}
+.wk{display:flex;align-items:center;gap:10px;padding:5px 0}
+.wk-name{
+  flex:none;width:32px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
+}
+.wk-track{display:block;flex:1;height:9px;border-radius:99px;background:var(--line-soft);overflow:hidden}
+.wk-fill{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .35s cubic-bezier(.4,0,.2,1)}
+.wk-pct{
+  flex:none;width:34px;text-align:right;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink-2);
+}
 
 /* ---------- edit mode ---------- */
 .erow{display:flex;align-items:center;gap:8px;padding:7px 10px 7px 12px;border-top:1px solid var(--line-soft)}
@@ -296,13 +436,17 @@ details[open] summary .chev{transform:rotate(180deg)}
 <div class="top">
   <div class="top-inner">
     <div class="top-row">
-      <h1>Routines</h1>
+      <button class="back" id="back" type="button" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>
+        <span>Routines</span>
+      </button>
+      <h1 id="wordmark">Routines</h1>
       <div class="head-right">
         <div class="date" id="date"></div>
         <button class="chip" id="chip" type="button"><i></i><span id="chipText">Local only</span></button>
       </div>
     </div>
-    <div class="meter">
+    <div class="meter" id="meter">
       <div class="track"><div class="fill" id="fill"></div></div>
       <div class="count" id="count"></div>
     </div>
@@ -310,6 +454,7 @@ details[open] summary .chev{transform:rotate(180deg)}
 </div>
 
 <div class="wrap">
+  <div id="stats" hidden></div>
   <div id="quoteHost"></div>
   <div id="sections"></div>
   <div id="editTools"></div>
@@ -345,6 +490,8 @@ function lsSet(k,v){ memory[k]=v; if(!storageOK) return; try{ localStorage.setIt
 function lsDel(k){ delete memory[k]; if(!storageOK) return; try{ localStorage.removeItem(k); }catch(e){} }
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
+var ESCMAP={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"};
+function esc(t){ return String(t).replace(/[&<>"]/g,function(c){ return ESCMAP[c]; }); }
 function secret(){
   var a=new Uint8Array(24); (self.crypto||self.msCrypto).getRandomValues(a);
   return Array.prototype.map.call(a,function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
@@ -513,6 +660,30 @@ function itemStreak(id){
   }
   return n;
 }
+function logStart(){
+  var ks=Object.keys(state.log).sort();
+  return ks.length? ks[0] : today();
+}
+/* Days from the first logged day up to today, at most n back. n=0 means all of it.
+   Clipped at the start so a week-old log doesn't read 25% against a 30-day window. */
+function rangeKeys(n){
+  var start=logStart(), out=[], cursor=new Date(), lim=n||4000;
+  while(out.length<lim && out.length<4000){
+    var k=keyOf(cursor);
+    if(k<start) break;
+    out.push(k);
+    cursor.setDate(cursor.getDate()-1);
+  }
+  return out.reverse();
+}
+function itemStats(id,keys){
+  var n=0;
+  keys.forEach(function(k){ if(isDoneOn(k,id)) n++; });
+  return {done:n,total:keys.length,pct:keys.length? n/keys.length : 0};
+}
+function namedItems(sec){
+  return sec.items.filter(function(it){ return it.label.trim()!==""; });
+}
 function toggle(id){
   if(!state.log[day]) state.log[day]={};
   if(state.log[day][id]) delete state.log[day][id];
@@ -530,6 +701,7 @@ var ICON={
   up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></svg>',
   down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  right:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
   cloud:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .3-9A6 6 0 0 0 6.2 11 3.5 3.5 0 0 0 7 19Z"/></svg>',
   disk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M9 3v6h6V3M8 21v-6h8v6"/></svg>'
 };
@@ -928,30 +1100,188 @@ function renderEditTools(){
   host.appendChild(box);
 }
 
-function renderLog(){
-  var host=$("log");
-  var days=[];
-  for(var i=13;i>=0;i--){
-    var d=new Date(); d.setDate(d.getDate()-i);
-    days.push({k:keyOf(d),d:d});
-  }
-  var streak=0, cursor=new Date();
+var RANGES=[
+  {label:"14d",title:"Last 14 days",n:14},
+  {label:"30d",title:"Last 30 days",n:30},
+  {label:"All",title:"All time",n:0}
+];
+var rangeIdx=1;
+var openDay=null;
+var view="list";
+
+function fmtDay(k,long){
+  var d=new Date(k+"T12:00:00");   /* noon: never let a timezone shove this onto the day before */
+  return d.toLocaleDateString(undefined, long
+    ? {weekday:"long",month:"short",day:"numeric"}
+    : {month:"short",day:"numeric"});
+}
+function curStreak(){
+  var n=0, cursor=new Date();
   if(pctOn(today())<1) cursor.setDate(cursor.getDate()-1);
   for(var g=0;g<400;g++){
-    if(pctOn(keyOf(cursor))>=1){ streak++; cursor.setDate(cursor.getDate()-1); }
+    if(pctOn(keyOf(cursor))>=1){ n++; cursor.setDate(cursor.getDate()-1); }
     else break;
   }
-  var dows=["S","M","T","W","T","F","S"];
-  var html='<div class="log-head"><div class="log-title">Last 14 days</div>'+
-    '<div class="streak">'+(streak?'<b>'+streak+'</b> day streak':'no streak yet')+'</div></div><div class="dots">';
-  days.forEach(function(x,idx){
-    var p=Math.round(pctOn(x.k)*100);
-    html+='<div class="day'+(idx===13?" today":"")+'" title="'+x.k+' — '+p+'%">'+
-      '<div class="bar"><span style="height:'+p+'%"></span></div>'+
-      '<div class="dow">'+dows[x.d.getDay()]+'</div></div>';
+  return n;
+}
+function bestStreak(){
+  var best=0, run=0;
+  rangeKeys(0).forEach(function(k){
+    if(pctOn(k)>=1){ run++; if(run>best) best=run; } else run=0;
   });
-  html+='</div>';
-  host.innerHTML=html;
+  return best;
+}
+function rangePct(keys){
+  var done=0, total=0;
+  keys.forEach(function(k){ var t=doneOn(k); done+=t.done; total+=t.total; });
+  return total? done/total : 0;
+}
+function weekdayPct(keys){
+  var sums=[0,0,0,0,0,0,0], counts=[0,0,0,0,0,0,0];
+  keys.forEach(function(k){
+    var wd=new Date(k+"T12:00:00").getDay();
+    sums[wd]+=pctOn(k); counts[wd]++;
+  });
+  return sums.map(function(sum,i){ return counts[i]? sum/counts[i] : 0; });
+}
+
+function bars(keys,showDow){
+  var dows=["S","M","T","W","T","F","S"], out="";
+  keys.forEach(function(k){
+    var p=Math.round(pctOn(k)*100);
+    out+='<button class="day'+(k===today()?" today":"")+'" type="button" data-day="'+k+'"'+
+      ' aria-pressed="'+(openDay===k?"true":"false")+'"'+
+      ' title="'+k+' — '+p+'%">'+
+      '<span class="bar"><span style="height:'+p+'%"></span></span>'+
+      (showDow? '<span class="dow">'+dows[new Date(k+"T12:00:00").getDay()]+'</span>' : "")+
+      '</button>';
+  });
+  return out;
+}
+
+/* One day, opened from a bar in the chart. */
+function dayDetail(k){
+  var t=doneOn(k);
+  var h='<div class="daydetail"><div class="dd-top">'+
+    '<div class="dd-date">'+esc(fmtDay(k,true))+'</div>'+
+    '<div class="dd-count">'+t.done+'/'+t.total+'</div></div>';
+  state.sections.forEach(function(sec){
+    var items=namedItems(sec);
+    if(!items.length) return;
+    h+='<div class="dd-sec">'+esc(sec.title)+'</div>';
+    items.forEach(function(it){
+      h+='<div class="dd-item'+(isDoneOn(k,it.id)?" on":"")+'">'+
+        '<span class="dd-mark">'+ICON.check+'</span><span>'+esc(it.label)+'</span></div>';
+    });
+  });
+  return h+'</div>';
+}
+
+/* Every habit, with its own strip and its own rate over the chosen window. */
+/* A long range would put 200 hairlines in 112px. Bucket it instead: at most 14
+   bars, each the completion rate across the days it covers. The odd-sized bucket
+   goes on the left, so the newest bars always mean the same thing. */
+function strips(keys){
+  var n=keys.length, count=Math.min(14,n), groups=[], i;
+  for(i=0;i<count;i++){
+    groups.push(keys.slice(Math.floor(i*n/count), Math.floor((i+1)*n/count)));
+  }
+  return groups;
+}
+/* Buckets can differ by a day, so say "4-5 days" rather than pick one and lie. */
+function stripNote(groups){
+  var lo=Infinity, hi=0;
+  groups.forEach(function(g){
+    if(g.length<lo) lo=g.length;
+    if(g.length>hi) hi=g.length;
+  });
+  if(hi<=1) return "One bar per day";
+  return "One bar per "+(lo===hi? hi : lo+"–"+hi)+" days";
+}
+
+function byHabit(keys){
+  var h="";
+  if(!keys.length || !Object.keys(state.log).length || !allItems().length){
+    return '<p class="bh-empty">Nothing logged yet — check something off and the numbers start here.</p>';
+  }
+  var groups=strips(keys);
+  var stripTitle=esc(stripNote(groups).toLowerCase());
+  state.sections.forEach(function(sec){
+    var items=namedItems(sec);
+    if(!items.length) return;
+    var done=0, total=0;
+    items.forEach(function(it){ var st=itemStats(it.id,keys); done+=st.done; total+=st.total; });
+    h+='<div class="bh-sec"><span class="bh-sec-name">'+esc(sec.title)+'</span>'+
+      '<span class="rule"></span><span class="bh-sec-pct">'+
+      (total? Math.round(done/total*100):0)+'%</span></div>';
+    items.forEach(function(it){
+      var st=itemStats(it.id,keys), cells="";
+      groups.forEach(function(g){
+        var n=0;
+        g.forEach(function(k){ if(isDoneOn(k,it.id)) n++; });
+        cells+='<i><span style="height:'+Math.round(n/g.length*100)+'%"></span></i>';
+      });
+      h+='<div class="bh-row"><span class="bh-label">'+esc(it.label)+'</span>'+
+        '<span class="strip" title="'+stripTitle+'">'+cells+'</span>'+
+        '<span class="bh-pct" title="'+st.done+' of '+st.total+' day'+(st.total===1?"":"s")+'">'+
+        Math.round(st.pct*100)+'%</span></div>';
+    });
+  });
+  return '<p class="bh-note">'+esc(
+      stripNote(groups)+"  ·  "+fmtDay(keys[0])+" → "+fmtDay(keys[keys.length-1])
+    )+'</p>'+h;
+}
+
+/* The compact card at the bottom of the list. Tapping any of it opens the full page. */
+function renderLog(){
+  var days=[], i;
+  for(i=13;i>=0;i--){ var d=new Date(); d.setDate(d.getDate()-i); days.push(keyOf(d)); }
+  var streak=curStreak();
+  $("log").innerHTML=
+    '<div class="log-head"><div class="log-title">Last 14 days</div>'+
+    '<div class="streak">'+(streak?'<b>'+streak+'</b> day streak':'no streak yet')+'</div></div>'+
+    '<div class="dots">'+bars(days,true)+'</div>'+
+    '<button class="log-more" type="button" data-more="1">'+
+    '<span>Habit by habit</span>'+ICON.right+'</button>';
+}
+
+/* The whole analytics page. One range control drives everything on it. */
+function renderStats(){
+  var r=RANGES[rangeIdx], keys=rangeKeys(r.n);
+  var gap = keys.length>40 ? 1.5 : keys.length>20 ? 3 : 6;
+  var h='<div class="tiles">'+
+    '<div class="tile"><b>'+curStreak()+'</b><span>day streak</span></div>'+
+    '<div class="tile"><b>'+bestStreak()+'</b><span>best ever</span></div>'+
+    '<div class="tile"><b>'+Math.round(rangePct(keys)*100)+'%</b><span>'+esc(r.title.toLowerCase())+'</span></div>'+
+    '</div>';
+
+  h+='<div class="card"><div class="log-head"><div class="log-title">'+esc(r.title)+'</div><div class="ranges">';
+  RANGES.forEach(function(x,i){
+    h+='<button class="rbtn" type="button" data-range="'+i+'" aria-pressed="'+
+      (i===rangeIdx?"true":"false")+'">'+x.label+'</button>';
+  });
+  h+='</div></div>';
+  if(keys.length){
+    h+='<div class="chart" style="gap:'+gap+'px">'+bars(keys,keys.length<=14)+'</div>'+
+      '<div class="span-note">'+esc(fmtDay(keys[0])+" → "+fmtDay(keys[keys.length-1]))+'</div>';
+    if(openDay) h+=dayDetail(openDay);
+  }
+  h+='</div>';
+
+  h+='<div class="card"><div class="log-head"><div class="log-title">By habit</div></div>'+byHabit(keys)+'</div>';
+
+  if(keys.length){
+    var wk=weekdayPct(keys), names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    h+='<div class="card"><div class="log-head"><div class="log-title">By weekday</div></div>';
+    [1,2,3,4,5,6,0].forEach(function(i){
+      var p=Math.round(wk[i]*100);
+      h+='<div class="wk"><span class="wk-name">'+names[i]+'</span>'+
+        '<span class="wk-track"><span class="wk-fill" style="width:'+p+'%"></span></span>'+
+        '<span class="wk-pct">'+p+'%</span></div>';
+    });
+    h+='</div>';
+  }
+  $("stats").innerHTML=h;
 }
 
 function renderNote(){
@@ -969,7 +1299,15 @@ function renderNote(){
 }
 
 function render(){
-  renderHeader(); renderQuote(); renderSections(); renderEditTools(); renderLog(); renderNote();
+  var onStats = view==="stats";
+  ["wordmark","meter","quoteHost","sections","editTools","log","note","fab"].forEach(function(id){
+    $(id).hidden = onStats;
+  });
+  $("back").hidden = !onStats;
+  $("stats").hidden = !onStats;
+  renderHeader();
+  if(onStats){ renderStats(); return; }
+  renderQuote(); renderSections(); renderEditTools(); renderLog(); renderNote();
   $("fabLabel").textContent = editing? "Done" : "Edit list";
   $("fab").classList.toggle("on", editing);
   $("fab").querySelector("svg").innerHTML = editing
@@ -977,18 +1315,63 @@ function render(){
     : '<path d="M12 20h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
 }
 
+function endEdit(){
+  if(!editing) return;
+  state.sections.forEach(function(s){
+    s.items=s.items.filter(function(it){ return it.label.trim()!==""; });
+  });
+  state.sections=state.sections.filter(function(s){ return s.items.length||s.title.trim(); });
+  editing=false;
+  save();
+}
+
 $("fab").addEventListener("click",function(){
-  if(editing){
-    state.sections.forEach(function(s){
-      s.items=s.items.filter(function(it){ return it.label.trim()!==""; });
-    });
-    state.sections=state.sections.filter(function(s){ return s.items.length||s.title.trim(); });
-    save();
-  }
-  editing=!editing;
+  if(editing){ endEdit(); render(); window.scrollTo({top:0,behavior:"smooth"}); return; }
+  editing=true;
   render();
-  if(!editing) window.scrollTo({top:0,behavior:"smooth"});
 });
+
+/* Two views, one file. The history entry is what makes a browser back button
+   and a trackpad swipe land on the list instead of leaving the app. */
+function goStats(k){
+  endEdit();
+  openDay=k||null;
+  if(view!=="stats"){
+    view="stats";
+    try{ history.pushState({routines:"stats"},""); }catch(e){}
+  }
+  render();
+  window.scrollTo(0,0);
+}
+function goList(){
+  if(view!=="stats") return;
+  if(history.state&&history.state.routines==="stats"){ history.back(); return; }
+  view="list"; openDay=null;
+  render();
+  window.scrollTo(0,0);
+}
+window.addEventListener("popstate",function(){
+  if(view!=="stats") return;
+  view="list"; openDay=null;
+  render();
+  window.scrollTo(0,0);
+});
+$("back").addEventListener("click",goList);
+
+/* Delegated: the hosts are emptied and refilled on every render, never replaced. */
+function chartClick(e){
+  if(!e.target||!e.target.closest) return;
+  var r=e.target.closest("[data-range]");
+  if(r){ rangeIdx=+r.getAttribute("data-range"); openDay=null; renderStats(); return; }
+  if(e.target.closest("[data-more]")){ goStats(null); return; }
+  var b=e.target.closest("[data-day]");
+  if(!b) return;
+  var k=b.getAttribute("data-day");
+  if(view==="stats"){ openDay = openDay===k ? null : k; renderStats(); }
+  else goStats(k);
+}
+$("log").addEventListener("click",chartClick);
+$("stats").addEventListener("click",chartClick);
 
 $("chip").addEventListener("click",function(){
   if(cfg&&sync.state!=="busy"){ pull(); return; }
