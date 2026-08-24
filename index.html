@@ -1025,13 +1025,13 @@ function renderEditTools(){
   box.appendChild(syncPanel());
 
   var det=document.createElement("details");
-  det.appendChild(summaryRow("disk","Backup & restore",null));
+  det.appendChild(summaryRow("up","Undo a list change",null));
   var pad=document.createElement("div"); pad.className="dpad";
   var snaps=snapshots();
   var sp=document.createElement("p");
   sp.textContent = snaps.length
-    ? "Saved automatically just before each edit to the list. The newest is first."
-    : "Nothing saved yet \u2014 a copy is kept automatically the first time you edit the list.";
+    ? "A copy is kept automatically just before each change to the list, newest first. Checking things off never makes one."
+    : "Nothing to undo yet \u2014 a copy is kept automatically the first time you change the list.";
   pad.appendChild(sp);
   if(snaps.length){
     var sel=document.createElement("select");
@@ -1050,7 +1050,7 @@ function renderEditTools(){
     sb.addEventListener("click",function(){
       var sn=snapshots()[Number(sel.value)];
       if(!sn) return;
-      if(!confirm("Roll the list back to "+stamp(sn.t)+"? Today\u2019s checkmarks are kept.")) return;
+      if(!confirm("Roll the list back to "+stamp(sn.t)+"? Today\u2019s checkmarks are kept, and this replaces the list on your other devices too.")) return;
       try{
         var next=JSON.parse(sn.body);
         if(!next.sections) throw new Error("bad");
@@ -1061,10 +1061,22 @@ function renderEditTools(){
     });
     pad.appendChild(sb);
   }
+  det.appendChild(pad);
+  box.appendChild(det);
+
+  /* the whole document as text. it is a wall of JSON, so it lives behind its own
+     disclosure - the snapshots above are the everyday undo; this is the escape
+     hatch that survives losing the device. */
+  var textDet=document.createElement("details");
+  textDet.appendChild(summaryRow("disk","Keep a text copy",null));
+  var tpad=document.createElement("div"); tpad.className="dpad";
   var p=document.createElement("p");
-  p.textContent="Or keep your own copy as text. Paste one back in and press Restore to roll back.";
+  p.textContent="Your whole list and its history, as text. Snapshots live only in this browser, so paste this somewhere safe if you want a copy that survives losing this device.";
   var ta=document.createElement("textarea");
-  ta.value=JSON.stringify(state); ta.setAttribute("aria-label","Backup data");
+  ta.value=JSON.stringify(state); ta.setAttribute("aria-label","Text copy of the list");
+  var cb=document.createElement("button");
+  cb.className="btn"; cb.type="button"; cb.textContent="Copy the text";
+  cb.addEventListener("click",function(){ copy(ta,cb,"Copy the text"); });
   var rb=document.createElement("button");
   rb.className="btn ghost"; rb.type="button"; rb.textContent="Restore from the text above";
   rb.addEventListener("click",function(){
@@ -1073,11 +1085,11 @@ function renderEditTools(){
       if(!next.sections) throw new Error("bad");
       state=next; if(!state.log) state.log={};
       save(); editing=false; render();
-    }catch(e){ alert("That text isn't a valid backup — check that you pasted the whole thing."); }
+    }catch(e){ alert("That text isn't a valid copy — check that you pasted the whole thing."); }
   });
-  pad.appendChild(p); pad.appendChild(ta); pad.appendChild(rb);
-  det.appendChild(pad);
-  box.appendChild(det);
+  tpad.appendChild(p); tpad.appendChild(ta); tpad.appendChild(cb); tpad.appendChild(rb);
+  textDet.appendChild(tpad);
+  box.appendChild(textDet);
 
   var clr=document.createElement("button");
   clr.className="btn ghost danger"; clr.type="button"; clr.textContent="Clear today's checkmarks";
