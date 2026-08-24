@@ -700,7 +700,7 @@ function syncPanel(){
     if(!/^https?:\/\//.test(u)||!a||!k){ alert("Fill in the project URL, the anon key, and a secret key."); return; }
     cfg={url:u,anon:a,key:k};
     lsSet(CFGKEY,JSON.stringify(cfg));
-    state.mtime=Date.now(); saveLocal();
+    saveLocal();
     pull().then(function(){ render(); document.getElementById("syncPanel").open=true; });
   });
   pad.appendChild(on);
