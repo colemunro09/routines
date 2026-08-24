@@ -15,7 +15,11 @@ root. **Pushing to `main` deploys.** Redeploy takes about a minute.
 
 - **One file.** `index.html` is the entire app: markup, CSS, and JS inline. No build step,
   no bundler, no framework, no npm, no dependencies. Do not introduce any. The whole point
-  is that it can be opened, edited, and re-hosted anywhere with no toolchain.
+  is that it can be opened, edited, and re-hosted anywhere with no toolchain. The one companion
+  file is `icon.png` (180x180, the CM mark on black) — iOS ignores `rel="icon"` and data
+  URIs when adding to the home screen, so the touch icon has to be a real file next to
+  `index.html`. Nothing breaks if it's missing; the home screen just falls back to a
+  screenshot.
 - **No `<!doctype>`, `<html>`, `<head>`, or `<body>` tags** — the file opens with `<title>`
   and the font `<link>`. It renders fine as a standalone page and stays publishable as a
   Claude Artifact. Meta tags for iOS standalone mode are injected by JS at startup.
@@ -69,12 +73,22 @@ Supabase Postgres, reached over PostgREST RPC. Two functions, `routines_get(k)` 
 `routines_put(k, d)`, both `security definer`. RLS is on for the `routines` table with **no
 policies**, so the `anon` key cannot touch the table directly — the functions are the only
 door, and each needs the exact secret key. This is what prevents someone with the anon key
-from listing every row. The SQL lives in the README and inside the app's sync panel; keep
-the three copies identical if you change it.
+from listing every row. The SQL is run once per Supabase project and lives **only in the
+README** — the app's sync panel used to carry a copy and no longer does, so there are two
+copies to keep in step: the README and what is actually deployed in the database.
 
 Config (`{url, anon, key}`) lives in `localStorage` under `routines.cfg`, never in the
-repo. A **setup link** base64s that config into the URL hash; on load the app reads it,
-saves it, and strips the hash. That link is the entire login — treat it as a credential.
+repo. A **setup link** base64s `{url, anon}` — **never `key`** — into the URL hash; on load
+the app saves that as a *pending* config under `routines.pending`, strips the hash, and asks
+for the secret key before sync turns on. Base64 is not encryption, so anything put in that
+hash is public the moment the link is; don't put the key back in it.
+
+Links made before this change did carry the key, and `readHash()` still honours them so
+existing devices keep working. That's a compatibility ramp, not a design goal.
+
+The panel prefills a freshly minted `secret()` **only** when there is no config and nothing
+pending. A device arriving on a setup link must get an empty field — minting a key there
+silently creates a second row and the two devices never sync, with no error shown.
 
 Merge is last-write-wins on the document by `mtime`, **except** `log`, which merges at the
 day level (`Object.assign({}, older.log, newer.log)`). That way a morning checked off on a
@@ -113,8 +127,8 @@ animation that ignores it.
   source contains nothing sensitive.
 - **Local storage plus a JSON document** rather than a normalized schema. One user, tiny
   data, and it keeps the app fully functional with sync turned off.
-- **No login.** A long secret key in a URL is the whole auth model. This was a deliberate
-  call by the owner.
+- **No login.** A long secret key is the whole auth model. This was a deliberate call by
+  the owner. It no longer travels in the URL, though — it's typed once per device.
 
 ## Known gaps
 

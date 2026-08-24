@@ -482,7 +482,7 @@ details[open] summary .chev{transform:rotate(180deg)}
   t.content=m[1];
 });
 
-var KEY="routines.v1", CFGKEY="routines.cfg";
+var KEY="routines.v1", CFGKEY="routines.cfg", PENDKEY="routines.pending";
 var storageOK=true, memory={};
 try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); }catch(e){ storageOK=false; }
 function lsGet(k){ if(!storageOK) return memory[k]||null; try{ return localStorage.getItem(k); }catch(e){ return null; } }
@@ -527,23 +527,35 @@ var editing=false;
 var cfg=null;
 try{ cfg=JSON.parse(lsGet(CFGKEY)||"null"); }catch(e){ cfg=null; }
 
-/* a setup link carries the whole config in the hash */
+/* a half-finished setup: project reached, secret key still to be typed */
+var pending=null;
+try{ pending=JSON.parse(lsGet(PENDKEY)||"null"); }catch(e){ pending=null; }
+
+/* a setup link carries the project, never the secret key. older links carried
+   the key too - still honoured, so devices set up before this change keep
+   working until the key is rotated. */
 (function readHash(){
   var m=/[#&]s=([A-Za-z0-9_\-]+)/.exec(location.hash||"");
   if(!m) return;
   try{
     var json=decodeURIComponent(escape(atob(m[1].replace(/-/g,"+").replace(/_/g,"/"))));
     var next=JSON.parse(json);
-    if(next.url&&next.anon&&next.key){
-      cfg=next; lsSet(CFGKEY,JSON.stringify(cfg));
-      history.replaceState(null,"",location.pathname+location.search);
+    if(!next.url||!next.anon) return;
+    if(next.key){
+      cfg={url:next.url,anon:next.anon,key:next.key};
+      lsSet(CFGKEY,JSON.stringify(cfg));
+      pending=null; lsDel(PENDKEY);
+    }else if(!cfg){
+      pending={url:next.url,anon:next.anon};
+      lsSet(PENDKEY,JSON.stringify(pending));
     }
+    history.replaceState(null,"",location.pathname+location.search);
   }catch(e){}
 })();
 
 function setupLink(){
   if(!cfg) return "";
-  var b=btoa(unescape(encodeURIComponent(JSON.stringify(cfg))))
+  var b=btoa(unescape(encodeURIComponent(JSON.stringify({url:cfg.url,anon:cfg.anon}))))
         .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
   return location.origin+location.pathname+"#s="+b;
 }
@@ -887,36 +899,6 @@ function editRow(sec,it,ii){
 }
 
 /* ---------- sync panel ---------- */
-var SQL=[
-"create table if not exists routines (",
-"  key text primary key,",
-"  data jsonb not null,",
-"  updated_at timestamptz not null default now()",
-");",
-"alter table routines enable row level security;",
-"",
-"create or replace function routines_get(k text)",
-"returns jsonb language sql security definer set search_path = public as $$",
-"  select data from routines where key = k;",
-"$$;",
-"",
-"create or replace function routines_put(k text, d jsonb)",
-"returns timestamptz language plpgsql security definer set search_path = public as $$",
-"declare ts timestamptz;",
-"begin",
-"  insert into routines(key, data) values (k, d)",
-"  on conflict (key) do update set data = excluded.data, updated_at = now()",
-"  returning updated_at into ts;",
-"  return ts;",
-"end;",
-"$$;",
-"",
-"revoke all on function routines_get(text) from public;",
-"revoke all on function routines_put(text, jsonb) from public;",
-"grant execute on function routines_get(text) to anon;",
-"grant execute on function routines_put(text, jsonb) to anon;"
-].join("\n");
-
 function field(labelText,value,placeholder){
   var f=document.createElement("div"); f.className="field";
   var l=document.createElement("label"); l.textContent=labelText;
@@ -933,46 +915,44 @@ function syncPanel(){
   det.appendChild(summaryRow("cloud","Sync across devices",{tone:statusTone(),text:sync.msg}));
   var pad=document.createElement("div"); pad.className="dpad";
 
-  var steps=document.createElement("ol"); steps.className="ol";
-  steps.innerHTML=
-    "<li>In Supabase, open <b>SQL Editor</b>, paste the block below, and run it. Once, ever.</li>"+
-    "<li>Open <b>Project Settings → API</b>. Copy the <b>Project URL</b> and the <b>anon public</b> key into the fields below.</li>"+
-    "<li>Press <b>Turn on sync</b>, then <b>Copy setup link</b> and open that link on your other devices.</li>";
-  var sqlTa=document.createElement("textarea");
-  sqlTa.value=SQL; sqlTa.readOnly=true; sqlTa.setAttribute("aria-label","Setup SQL");
-  var copySql=document.createElement("button");
-  copySql.className="btn ghost"; copySql.type="button"; copySql.textContent="Copy the SQL";
-  copySql.addEventListener("click",function(){ copy(sqlTa,copySql,"Copy the SQL"); });
-
-  if(cfg){
-    /* setup is done - keep the one-time instructions out of the way */
-    var setup=document.createElement("details");
-    setup.appendChild(summaryRow("disk","Setup SQL",null));
-    var spad=document.createElement("div"); spad.className="dpad";
-    spad.appendChild(steps); spad.appendChild(sqlTa); spad.appendChild(copySql);
-    setup.appendChild(spad);
-    pad.appendChild(setup);
-  }else{
-    pad.appendChild(steps); pad.appendChild(sqlTa); pad.appendChild(copySql);
+  /* first-time database setup - the table, the two functions, the grants - is not
+     documented here. it happens once per Supabase project and lives in the README. */
+  if(!cfg&&!pending){
+    var steps=document.createElement("ol"); steps.className="ol";
+    steps.innerHTML=
+      "<li>Open <b>Project Settings → API</b>. Copy the <b>Project URL</b> and the <b>anon public</b> key into the fields below.</li>"+
+      "<li>Press <b>Turn on sync</b>, then <b>Copy setup link</b> and open that link on your other devices. "+
+      "The link carries the project, not your secret key — paste that once on each device, from <b>Copy secret key</b>.</li>";
+    pad.appendChild(steps);
   }
 
-  var fUrl=field("Project URL",cfg?cfg.url:"","https://xxxx.supabase.co");
-  var fKey=field("anon public key",cfg?cfg.anon:"","eyJhbGciOi…");
-  var fSec=field("Your secret key",cfg?cfg.key:secret(),"");
-  if(!cfg && /supabase\.co$/i.test(location.hostname)) fUrl.input.value=location.origin;
+  var fUrl=field("Project URL",cfg?cfg.url:(pending?pending.url:""),"https://xxxx.supabase.co");
+  var fKey=field("anon public key",cfg?cfg.anon:(pending?pending.anon:""),"eyJhbGciOi…");
+  var fSec=field("Your secret key",cfg?cfg.key:"",pending?"paste the same key as your first device":"");
+  /* a fresh setup mints a key. a device arriving on a setup link must NOT -
+     the key is the row it reads, so a new one would quietly start a second list. */
+  if(!cfg&&!pending) fSec.input.value=secret();
+  if(!cfg&&!pending&&/supabase\.co$/i.test(location.hostname)) fUrl.input.value=location.origin;
   pad.appendChild(fUrl); pad.appendChild(fKey); pad.appendChild(fSec);
 
   var hint=document.createElement("p"); hint.className="hint";
-  hint.textContent="The secret key is the whole login — anyone with the setup link sees this list. Keep the link out of public places and it stays yours.";
+  hint.textContent=pending
+    ? "Open the sync panel on the device you set up first, press Copy secret key, and paste it here. It has to match exactly — a different key starts a separate, empty list."
+    : "The secret key is the whole login. The setup link no longer carries it, so keep the key itself out of anywhere public and this list stays yours.";
   pad.appendChild(hint);
 
   var on=document.createElement("button");
-  on.className="btn primary"; on.type="button"; on.textContent=cfg?"Save and sync now":"Turn on sync";
+  on.className="btn primary"; on.type="button";
+  on.textContent=cfg?"Save and sync now":(pending?"Finish setup":"Turn on sync");
   on.addEventListener("click",function(){
     var u=fUrl.input.value.trim().replace(/\/+$/,""), a=fKey.input.value.trim(), k=fSec.input.value.trim();
-    if(!/^https?:\/\//.test(u)||!a||!k){ alert("Fill in the project URL, the anon key, and a secret key."); return; }
+    if(!/^https?:\/\//.test(u)||!a||!k){
+      alert(pending?"Paste the secret key from the device you set up first.":"Fill in the project URL, the anon key, and a secret key.");
+      return;
+    }
     cfg={url:u,anon:a,key:k};
     lsSet(CFGKEY,JSON.stringify(cfg));
+    pending=null; lsDel(PENDKEY);
     saveLocal();
     pull().then(function(){ render(); document.getElementById("syncPanel").open=true; });
   });
@@ -988,11 +968,17 @@ function syncPanel(){
     copyLink.addEventListener("click",function(){ copy(linkTa,copyLink,"Copy setup link"); });
     pad.appendChild(copyLink);
 
+    var copySec=document.createElement("button");
+    copySec.className="btn"; copySec.type="button"; copySec.textContent="Copy secret key";
+    copySec.addEventListener("click",function(){ copy(fSec.input,copySec,"Copy secret key"); });
+    pad.appendChild(copySec);
+
     var off=document.createElement("button");
     off.className="btn ghost"; off.type="button"; off.textContent="Turn sync off on this device";
     off.addEventListener("click",function(){
       if(!confirm("Stop syncing on this device? Your list stays here and stays in Supabase.")) return;
-      cfg=null; lsDel(CFGKEY); setSync("off","Local only"); render();
+      cfg=null; lsDel(CFGKEY); pending=null; lsDel(PENDKEY);
+      setSync("off","Local only"); render();
     });
     pad.appendChild(off);
 
@@ -1003,6 +989,8 @@ function syncPanel(){
     }
   }
 
+  /* a device that arrived on a setup link opens here, not buried */
+  if(pending) det.open=true;
   det.appendChild(pad);
   return det;
 }
@@ -1013,9 +1001,10 @@ function copy(ta,btn,restore){
     navigator.clipboard.writeText(ta.value).then(done,function(){ legacy(); });
   }catch(e){ legacy(); }
   function legacy(){
+    var was=ta.readOnly;
     ta.removeAttribute("readonly"); ta.select(); ta.setSelectionRange(0,999999);
     try{ document.execCommand("copy"); done(); }catch(e){ btn.textContent="Select the text and copy"; }
-    ta.readOnly=true;
+    ta.readOnly=was;
   }
 }
 
@@ -1393,6 +1382,9 @@ window.addEventListener("focus",function(){ pull(); });
 
 markClean();
 if(cfg) setSync("busy","Syncing…");
+/* arrived on a setup link: the panel lives in edit mode, so say so on the chip -
+   tapping it opens the panel, which is where the secret key gets pasted. */
+else if(pending) setSync("off","Finish setup");
 render();
 if(cfg) pull();
 })();

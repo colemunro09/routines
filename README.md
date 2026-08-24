@@ -28,7 +28,11 @@ same list and the same checkmarks appear everywhere.
 2. Open the app, then **Edit list → Sync across devices**. Paste your **Project URL** and
    **anon public** key from *Project Settings → API*. A secret key is generated for you.
 3. Press **Turn on sync**, then **Copy setup link**, and open that link on your other
-   devices. The link carries the config, applies it, and removes itself from the address bar.
+   devices. The link carries the project URL and anon key, applies them, and removes itself
+   from the address bar.
+4. On each of those devices the app asks for the secret key. Get it from **Copy secret key**
+   on the first device and paste it in. It must match exactly — a different key reads a
+   different row, which means a second, empty list and no syncing.
 
 ```sql
 create table if not exists routines (
@@ -64,8 +68,12 @@ Row-level security is on with no policies, so the `anon` key cannot read or writ
 directly. The only way in is those two functions, and both need your exact secret key —
 which means the table can't be listed or enumerated.
 
-**The secret key is the entire login.** Anyone holding the setup link can read and change
-the list. Keep the link out of public places.
+**The secret key is the entire login.** The setup link deliberately does *not* contain it,
+so a leaked link on its own opens nothing — it only names the project. Guard the key itself.
+Anyone holding it, along with the project URL and anon key, can read and change the list.
+
+To rotate: change the secret key in the sync panel on one device, then re-enter the new key
+on the others. The old key's row is left behind in the table, holding whatever it last had.
 
 ### How conflicts resolve
 
