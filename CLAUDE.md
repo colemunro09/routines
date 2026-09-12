@@ -5,8 +5,8 @@ Context for working on this repo. Read before editing `index.html`.
 ## What this is
 
 A personal daily habit checklist, built for the owner. It installs to an iPhone home
-screen and a Mac dock, checkmarks reset at midnight, and the day rolls into a 14-day log
-with a streak counter. Each day can carry a one-line note. Optional Supabase sync keeps
+screen and a Mac dock, checkmarks reset at 2:00am, and the day rolls into a 14-day log
+with a streak counter. A standing scratch pad sits under the list. Optional Supabase sync keeps
 devices on the same list, and a service worker keeps it opening with no network.
 
 Live at https://colemunro09.github.io/routines/ — GitHub Pages serves `main` at the repo
@@ -57,12 +57,13 @@ URL, anon key, or secret key. None of those are in the repo today; keep it that 
   v: 3,
   quote: "…",        // line above the list
   midQuote: "…",     // line between the first and second section
+  scratch: "…",      // standing dump pad — not tied to a day, not cleared at midnight
   sections: [ { id, icon: "sun"|"moon", title, items: [ { id, label } ] } ],
   log: {
     "2026-08-23": {
       d: { itemId: 1, … },   // what was ticked
       n: 7,                  // how many habits the list held that day
-      note: "…"              // optional, one line about the day
+      note: "…"              // leftover per-day notes, still shown in stats if present
     }
   },
   mtime: 1755993600000                        // last local edit, drives sync merge
@@ -75,7 +76,10 @@ row dragged between sections just changes which array it lands in — which is w
 row looks its item up (`sectionOf`) instead of closing over the section it was rendered in.
 
 `log` keys are **local** dates (`keyOf()`), never UTC — a checkmark belongs to the day the
-person experienced, not the day in Greenwich.
+person experienced, not the day in Greenwich. The civil day runs until 2:00am
+(`RESET_HOUR`), so 12:40am Saturday still files as Friday. `today()` and `nowDay()` are
+the source of that; don't walk a streak or the 14-day log from `new Date()` or the
+0–2am window will look like a new empty day.
 
 **`n` is the point of v3 and must not be dropped.** Score a past day against today's list
 and the past changes every time the list does: add a habit this morning and a 6/6 Tuesday
@@ -188,8 +192,10 @@ transitions — don't add animation that ignores it.
 - Streak counts only 100% days. Partial days show in the bar chart but don't extend a streak.
 - Every habit is every day. There is no per-habit schedule, and this is deliberate — the
   owner's list really is daily. Don't add one unasked.
-- Day notes are written on the list for today only; older notes show read-only in the stats
-  day detail. Editing one in place would need the detail to stop being an `innerHTML` blob.
+- Day notes used to be a one-line field on today; that is now a standing scratch pad on
+  the document (`scratch`), not `log[day].note`. Older per-day notes still render read-only
+  in the stats day detail. Editing one in place would need the detail to stop being an
+  `innerHTML` blob.
 
 ## Verifying a change
 

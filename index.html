@@ -249,6 +249,7 @@ h1{
 .dd-note{
   margin:11px 0 0;padding-top:10px;border-top:1px solid var(--line-soft);
   font-size:13.5px;font-style:italic;color:var(--ink-2);line-height:1.5;
+  white-space:pre-wrap;
 }
 
 /* ---------- habit by habit, over time ---------- */
@@ -396,20 +397,31 @@ body.dragging .erow input{pointer-events:none}
   font-size:14.5px;line-height:1.5;resize:vertical;min-height:64px;
 }
 
-/* ---------- a line about the day ---------- */
+/* ---------- standing scratch pad ---------- */
 .dnote{margin:4px 0 2px}
-.dnote label{
-  display:block;font-family:"IBM Plex Mono",ui-monospace,monospace;
+.dnote-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:44px;margin:0 0 2px;
+}
+.dnote-head label{
+  margin:0 0 0 2px;font-family:"IBM Plex Mono",ui-monospace,monospace;
   font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
-  margin:0 0 7px 2px;
 }
-.dnote input{
-  width:100%;height:54px;padding:0 13px;
+.dnote .copy{
+  flex:none;background:none;border:0;cursor:pointer;
+  min-height:44px;padding:0 8px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+}
+.dnote .copy:hover{color:var(--ink)}
+.dnote textarea{
+  display:block;width:100%;min-height:54px;
+  padding:12px 13px;resize:none;overflow:hidden;
   background:var(--surface);border:1px solid var(--line-soft);border-radius:10px;
-  font-size:14.5px;line-height:1.4;color:var(--ink);
+  font-size:14.5px;line-height:1.45;color:var(--ink);
 }
-.dnote input::placeholder{color:var(--ink-3);font-style:italic}
-.dnote input:focus{outline:none;border-color:var(--accent)}
+.dnote textarea::placeholder{color:var(--ink-3);font-style:italic}
+.dnote textarea:focus{outline:none;border-color:var(--accent)}
 
 .tools{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 .btn{
@@ -568,6 +580,7 @@ var DEFAULT={
     ].map(function(t){return {id:uid(),label:t};})}
   ],
   log:{},
+  scratch:"",
   mtime:0
 };
 
@@ -668,6 +681,10 @@ function mergeDocs(local,remote){
   var older=newer===remote?local:remote;
   var out=JSON.parse(JSON.stringify(newer));
   out.log=Object.assign({},older.log||{},newer.log||{});
+  /* Older builds have no scratch field. A newer mtime from one of those would
+     otherwise blank a pad this device already holds. */
+  if(typeof out.scratch!=="string")
+    out.scratch=typeof older.scratch==="string"?older.scratch:"";
   return out;
 }
 
@@ -726,7 +743,7 @@ var SNAPKEY="routines.snaps", SNAPMAX=20, SNAPGAP=90000;
 function stamp(t){
   var d=new Date(t), M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var hh=String(d.getHours()).padStart(2,"0"), mm=String(d.getMinutes()).padStart(2,"0");
-  return (keyOf(d)===today()? "Today" : M[d.getMonth()]+" "+d.getDate())+" "+hh+":"+mm;
+  return (keyOf(nowDay(d))===today()? "Today" : M[d.getMonth()]+" "+d.getDate())+" "+hh+":"+mm;
 }
 function snapshots(){ try{ return JSON.parse(lsGet(SNAPKEY)||"[]"); }catch(e){ return []; } }
 function structOf(s){ return JSON.stringify({q:s.quote,m:s.midQuote,sec:s.sections}); }
@@ -751,8 +768,17 @@ function save(){
 function keyOf(d){
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
-function today(){ return keyOf(new Date()); }
+/* The day runs until 2:00am local, so a late night still belongs to yesterday.
+   Pass a Date to read some other moment the same way; omit it for now. */
+var RESET_HOUR=2;
+function nowDay(from){
+  var d=from? new Date(from.getTime()) : new Date();
+  if(d.getHours()<RESET_HOUR) d.setDate(d.getDate()-1);
+  return d;
+}
+function today(){ return keyOf(nowDay()); }
 var day=today();
+if(typeof state.scratch!=="string") state.scratch=noteOn(day)||"";
 
 function allItems(){ return itemsOf(state); }
 /* Today is still moving, so it scores against the list as it stands. A day that
@@ -775,7 +801,7 @@ function isDoneOn(k,id){ return !!(state.log[k]&&state.log[k].d&&state.log[k].d[
 function noteOn(k){ var rec=state.log[k]; return (rec&&rec.note)||""; }
 var STREAK_MIN=3;
 function itemStreak(id){
-  var n=0, cursor=new Date();
+  var n=0, cursor=nowDay();
   if(!isDoneOn(today(),id)) cursor.setDate(cursor.getDate()-1);
   for(var g=0;g<400;g++){
     if(isDoneOn(keyOf(cursor),id)){ n++; cursor.setDate(cursor.getDate()-1); }
@@ -790,7 +816,7 @@ function logStart(){
 /* Days from the first logged day up to today, at most n back. n=0 means all of it.
    Clipped at the start so a week-old log doesn't read 25% against a 30-day window. */
 function rangeKeys(n){
-  var start=logStart(), out=[], cursor=new Date(), lim=n||4000;
+  var start=logStart(), out=[], cursor=nowDay(), lim=n||4000;
   while(out.length<lim && out.length<4000){
     var k=keyOf(cursor);
     if(k<start) break;
@@ -816,7 +842,7 @@ function buzz(pattern){
 
 /* Today's record follows the list while the day is live: ticks belonging to a
    habit that was just deleted go with it, and the count is kept current so the
-   day freezes at the right denominator when midnight rolls it into the log. */
+   day freezes at the right denominator when 2:00am rolls it into the log. */
 function touchToday(){
   var rec=state.log[day];
   if(!rec) return;
@@ -841,9 +867,8 @@ function toggle(id){
   save();
   buzz(pctOn(day)>=1? [14,55,14] : 9);
 }
-function setNote(text){
-  dayRec().note=text;
-  touchToday();
+function setScratch(text){
+  state.scratch=text;
   save();
 }
 
@@ -899,7 +924,7 @@ function paintChip(){
 }
 
 function renderHeader(){
-  var d=new Date();
+  var d=nowDay();
   $("date").textContent=d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
   var t=doneOn(day);
   $("fill").style.width=(t.total? (t.done/t.total*100):0)+"%";
@@ -1440,7 +1465,7 @@ function fmtDay(k,long){
     : {month:"short",day:"numeric"});
 }
 function curStreak(){
-  var n=0, cursor=new Date();
+  var n=0, cursor=nowDay();
   if(pctOn(today())<1) cursor.setDate(cursor.getDate()-1);
   for(var g=0;g<400;g++){
     if(pctOn(keyOf(cursor))>=1){ n++; cursor.setDate(cursor.getDate()-1); }
@@ -1567,7 +1592,7 @@ function byHabit(keys){
 /* The compact card at the bottom of the list. Tapping any of it opens the full page. */
 function renderLog(){
   var days=[], i;
-  for(i=13;i>=0;i--){ var d=new Date(); d.setDate(d.getDate()-i); days.push(keyOf(d)); }
+  for(i=13;i>=0;i--){ var d=nowDay(); d.setDate(d.getDate()-i); days.push(keyOf(d)); }
   var streak=curStreak();
   $("log").innerHTML=
     '<div class="log-head"><div class="log-title">Last 14 days</div>'+
@@ -1616,25 +1641,38 @@ function renderStats(){
   $("stats").innerHTML=h;
 }
 
-/* One line about the day, kept with the day. The field is built once and then
-   left alone - rebuilding it on every render would yank the caret out mid-word. */
+/* Standing scratch pad. Built once and left alone so a render doesn't yank
+   the caret out mid-word. Midnight does not clear it. */
+function fitNote(el){
+  if(!el) return;
+  el.style.height="auto";
+  el.style.height=Math.max(54, el.scrollHeight)+"px";
+}
 function renderDayNote(){
   var host=$("dayNote");
   if(editing){ host.hidden=true; return; }
   host.hidden=false;
-  var i=host.querySelector("input");
+  var i=host.querySelector("textarea");
   if(i){
-    if(document.activeElement!==i) i.value=noteOn(day);
+    if(document.activeElement!==i){ i.value=state.scratch||""; fitNote(i); }
     return;
   }
+  var head=document.createElement("div");
+  head.className="dnote-head";
   var l=document.createElement("label");
-  l.textContent="Today";
-  i=document.createElement("input");
-  i.type="text"; i.value=noteOn(day); i.placeholder="A line about today";
-  i.maxLength=140; i.autocomplete="off";
+  l.textContent="Scratch";
+  i=document.createElement("textarea");
+  i.rows=2; i.value=state.scratch||"";
+  i.placeholder="Dump whatever — sort it later";
+  i.autocomplete="off";
   l.setAttribute("for", i.id="f_"+uid());
-  i.addEventListener("input",function(){ setNote(i.value); });
-  host.appendChild(l); host.appendChild(i);
+  var cb=document.createElement("button");
+  cb.className="copy"; cb.type="button"; cb.textContent="Copy";
+  cb.addEventListener("click",function(){ copy(i,cb,"Copy"); });
+  i.addEventListener("input",function(){ setScratch(i.value); fitNote(i); });
+  head.appendChild(l); head.appendChild(cb);
+  host.appendChild(head); host.appendChild(i);
+  fitNote(i);
 }
 
 function renderNote(){
@@ -1644,7 +1682,7 @@ function renderNote(){
     n.textContent="This browser is blocking local storage, so checkmarks won't survive a reload here. Open the page directly in Safari or Chrome.";
   }else if(cfg){
     n.className="note";
-    n.textContent="Synced through Supabase. Checkboxes clear themselves at midnight.";
+    n.textContent="Synced through Supabase. Checkboxes clear themselves at 2:00am.";
   }else{
     n.className="note";
     n.textContent="Saved on this device. Turn on sync in Edit list to share it with your other devices.";
@@ -1745,6 +1783,11 @@ document.addEventListener("visibilitychange",function(){
   render(); pull();
 });
 window.addEventListener("focus",function(){ pull(); });
+window.addEventListener("resize",function(){
+  var host=$("dayNote");
+  if(!host||host.hidden) return;
+  fitNote(host.querySelector("textarea"));
+});
 
 markClean();
 if(cfg) setSync("busy","Syncing…");

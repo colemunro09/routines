@@ -4,7 +4,7 @@ A daily habit checklist that installs to your phone's home screen and your compu
 One HTML file, plus an icon and a small offline worker. No build step, no framework, no
 dependencies.
 
-Check things off, and at midnight the list clears itself and the day gets filed into a
+Check things off, and at 2:00am the list clears itself and the day gets filed into a
 running log. Optional sync through Supabase keeps every device on the same list. Once it
 has loaded on a device it opens with no network at all.
 
@@ -16,8 +16,9 @@ has loaded on a device it opens with no network at all.
 - To reorder, drag a habit by the grip handle on its left. Drop it anywhere in either
   section — dragging one from Morning into Evening moves it there. With a keyboard,
   focus a handle and use the up and down arrow keys.
-- **Today** — one line about the day, under the list. It's filed with the day and shows up
-  again under that day in the stats view.
+- **Scratch** — a dump pad under the list. It stays until you clear it, including past
+  2:00am. **Copy** puts the whole thing on the clipboard so you can paste it wherever
+  it actually belongs.
 - The bar chart at the bottom shows the last 14 days. The streak counts consecutive days
   at 100%; today only breaks it once the day is over.
 - A day is scored against the list as it stood that day. Adding or deleting a habit changes
