@@ -12,7 +12,8 @@ has loaded on a device it opens with no network at all.
 
 - Tap a row to check it off.
 - **Edit list** (bottom right) — rename, delete, and add habits; add or remove whole
-  sections; edit both quote lines. Tap **Done** to go back.
+  sections; edit your two quote lines. Those lines rotate each day with a standing
+  set of questions. Tap **Done** to go back.
 - To reorder, drag a habit by the grip handle on its left. Drop it anywhere in either
   section — dragging one from Morning into Evening moves it there. With a keyboard,
   focus a handle and use the up and down arrow keys.

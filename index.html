@@ -132,6 +132,11 @@ h1{
   margin:18px 0 22px;padding-left:14px;border-left:2px solid var(--accent);
   font-style:italic;color:var(--ink-2);font-size:14.5px;line-height:1.5;
 }
+.qhint{
+  margin:-8px 0 18px 2px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+}
 
 /* ---------- sections ---------- */
 .interlude{display:flex;align-items:center;gap:14px;margin:2px 0 18px;padding:0 6px}
@@ -569,8 +574,8 @@ function secret(){
 
 var DEFAULT={
   v:3,
-  quote:"Write your own line here — tap Edit list to change it.",
-  midQuote:"A line between morning and evening.",
+  quote:"",
+  midQuote:"",
   sections:[
     {id:uid(),icon:"sun",title:"Morning",items:[
       "Make bed","Brush teeth","Stretch","Workout","Shower","Breakfast & water"
@@ -583,6 +588,19 @@ var DEFAULT={
   scratch:"",
   mtime:0
 };
+
+/* Standing questions for the two quote slots. Personal lines on the document
+   join the rotation; this list is the same on every device. */
+var LESSONS=[
+  "Is this decision reversible? If it is, have a bias toward action \u2014 most decisions are.",
+  "Instead of asking how to succeed, ask how you could fail \u2014 and avoid that.",
+  "What game are you playing \u2014 wealth, mystery, or legacy? Different games demand different moves.",
+  "What's the worst that could happen? Realizing that is how you plan.",
+  "How will you feel about this in 10 minutes, 10 months, 10 years?",
+  "If this were written up on the front page, would I still make it?",
+  "Is the time this decision is taking proportionate to the impact it'll have?",
+  "What are the first principles here \u2014 the assumptions you're taking for granted?"
+];
 
 /* ---------- load local doc ---------- */
 /* v3 turns each logged day from a flat map of ticked ids into { d, n, note }.
@@ -777,6 +795,12 @@ function nowDay(from){
   return d;
 }
 function today(){ return keyOf(nowDay()); }
+/* Days since a fixed local origin, so the quote pair is stable for a civil
+   day and the same on every device looking at that date. */
+function dayIndex(k){
+  var p=(k||today()).split("-");
+  return Math.round((new Date(+p[0],+p[1]-1,+p[2])-new Date(2020,0,1))/864e5);
+}
 var day=today();
 if(typeof state.scratch!=="string") state.scratch=noteOn(day)||"";
 
@@ -932,18 +956,44 @@ function renderHeader(){
   paintChip();
 }
 
+function quotePool(){
+  var seen={}, pool=[], i;
+  function add(s){
+    s=(s||"").trim();
+    if(!s||seen[s]) return;
+    seen[s]=1;
+    pool.push(s);
+  }
+  for(i=0;i<LESSONS.length;i++) add(LESSONS[i]);
+  add(state.quote);
+  add(state.midQuote);
+  return pool;
+}
+function rotated(slot){
+  var pool=quotePool(), n=pool.length;
+  if(!n) return "";
+  var i=dayIndex(today())+(slot? Math.max(1, Math.floor(n/2)) : 0);
+  return pool[((i%n)+n)%n];
+}
+
 function renderQuote(){
   var host=$("quoteHost");
   host.innerHTML="";
   if(editing){
     var ta=document.createElement("textarea");
-    ta.className="qedit"; ta.value=state.quote; ta.placeholder="A line for the top of the day";
+    ta.className="qedit"; ta.value=state.quote; ta.placeholder="A line of yours \u2014 it joins the daily rotation";
     ta.setAttribute("aria-label","Daily reminder");
     ta.addEventListener("input",function(){ state.quote=ta.value; save(); });
     host.appendChild(ta);
-  }else if(state.quote.trim()){
+    var hint=document.createElement("p");
+    hint.className="qhint";
+    hint.textContent="Your two lines rotate each day with a few standing questions.";
+    host.appendChild(hint);
+  }else{
+    var line=rotated(0);
+    if(!line) return;
     var p=document.createElement("p");
-    p.className="quote"; p.textContent=state.quote;
+    p.className="quote"; p.textContent=line;
     host.appendChild(p);
   }
 }
@@ -952,16 +1002,17 @@ function interlude(){
   if(editing){
     var ta=document.createElement("textarea");
     ta.className="qedit mid"; ta.value=state.midQuote;
-    ta.placeholder="A line between morning and evening";
+    ta.placeholder="A line between sections \u2014 also in the rotation";
     ta.setAttribute("aria-label","Mid-day reminder");
     ta.addEventListener("input",function(){ state.midQuote=ta.value; save(); });
     return ta;
   }
   var w=document.createElement("div");
-  if(!state.midQuote.trim()){ w.style.height="4px"; return w; }
+  var line=rotated(1);
+  if(!line){ w.style.height="4px"; return w; }
   w.className="interlude";
   w.innerHTML='<span class="rule"></span><p></p><span class="rule"></span>';
-  w.querySelector("p").textContent=state.midQuote;
+  w.querySelector("p").textContent=line;
   return w;
 }
 

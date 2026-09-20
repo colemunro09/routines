@@ -46,17 +46,21 @@ URL, anon key, or secret key. None of those are in the repo today; keep it that 
 1. `<title>` and the Google Fonts link
 2. `<style>` — CSS custom properties in `:root`, then components
 3. Static markup — sticky header, `#quoteHost`, `#sections`, `#editTools`, `#log`, the FAB
-4. `<script>` — one IIFE, in this order: meta injection, storage helpers, `DEFAULT`, state
-   load and migration, sync config and transport, date helpers, icons, render functions,
-   event wiring
+4. `<script>` — one IIFE, in this order: meta injection, storage helpers, `DEFAULT`,
+   `LESSONS`, state load and migration, sync config and transport, date helpers, icons,
+   render functions, event wiring
+
+The two quote slots are picked each civil day from `LESSONS` plus `quote` and
+`midQuote` on the document. Edit mode still edits those two personal lines; it
+does not edit the standing questions.
 
 ## Data model
 
 ```js
 {
   v: 3,
-  quote: "…",        // line above the list
-  midQuote: "…",     // line between the first and second section
+  quote: "…",        // your line; joins the daily rotation at the top of the list
+  midQuote: "…",     // your line; joins the daily rotation between the first and second section
   scratch: "…",      // standing dump pad — not tied to a day, not cleared at midnight
   sections: [ { id, icon: "sun"|"moon", title, items: [ { id, label } ] } ],
   log: {
