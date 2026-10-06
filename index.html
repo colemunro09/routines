@@ -2626,6 +2626,8 @@ function askSetup(host){
         throw new Error((d&&d.error)||("The server answered "+res.status+"."));
       });
       askCfg={url:url,key:key}; lsSet(ASKCFG,JSON.stringify(askCfg)); lsDel(ASKPEND);
+      /* the server holds the Supabase details now; don't leave a copy on this device */
+      lsDel(CFGKEY); lsDel(PENDKEY); pending=null;
       askEditing=false; cfg=serverCfg(); render(); pull(); scheduleNotion(2500);
     }).catch(function(e){
       go.disabled=false; go.textContent="Connect";
