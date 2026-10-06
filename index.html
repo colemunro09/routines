@@ -73,7 +73,7 @@ body{
   line-height:1.45;
   -webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;
-  padding-bottom:calc(86px + env(safe-area-inset-bottom));
+  padding-bottom:calc(150px + env(safe-area-inset-bottom));
 }
 button,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
@@ -478,7 +478,7 @@ details[open] summary .chev{transform:rotate(180deg)}
 /* ---------- floating edit toggle ---------- */
 .fab{
   position:fixed;right:max(16px,env(safe-area-inset-right));
-  bottom:calc(18px + env(safe-area-inset-bottom));z-index:30;
+  bottom:calc(74px + env(safe-area-inset-bottom));z-index:30;
   display:flex;align-items:center;gap:8px;
   padding:12px 18px;border-radius:99px;border:1px solid var(--line);
   background:var(--surface);box-shadow:var(--shadow);cursor:pointer;
@@ -492,6 +492,171 @@ details[open] summary .chev{transform:rotate(180deg)}
   margin:14px 0 0;padding:10px 12px;border-radius:10px;
   background:var(--accent-soft);color:var(--ink-2);font-size:13px;line-height:1.5;
 }
+
+/* ---------- tabs: Today, Meals, Groceries ---------- */
+.tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:25;
+  background:var(--paper);
+  background:color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter:saturate(1.4) blur(12px);
+  -webkit-backdrop-filter:saturate(1.4) blur(12px);
+  border-top:1px solid var(--line-soft);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.tabs-inner{max-width:34rem;margin:0 auto;display:flex}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  min-height:56px;padding:8px 4px;background:none;border:0;cursor:pointer;color:var(--ink-3);
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+}
+.tab svg{width:21px;height:21px}
+.tab.on{color:var(--accent)}
+
+/* ---------- meals and groceries ----------
+   Built from Today's own parts - .sec cards, .row lines, .box ticks - so the three tabs
+   read as one app. Only what Today has no equivalent for is new here. */
+.pane{display:flex;flex-direction:column;gap:14px;padding-top:18px}
+.pane-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pane-head h2{
+  font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+  font-weight:700;font-size:24px;line-height:1.05;letter-spacing:-.015em;margin:0;
+}
+.pane-sub{
+  margin-top:5px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-variant-numeric:tabular-nums;
+}
+.lmeter{height:4px;border-radius:99px;background:var(--line);overflow:hidden}
+.lmeter i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .35s cubic-bezier(.4,0,.2,1)}
+.pane-foot{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.linkbtn{
+  background:none;border:0;cursor:pointer;min-height:44px;padding:0 10px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);
+}
+.linkbtn:hover{color:var(--ink)}
+
+/* week strip */
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.dayb{
+  display:flex;flex-direction:column;align-items:center;gap:3px;min-height:60px;padding:7px 0 8px;
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;cursor:pointer;color:var(--ink-2);
+}
+.dayb .dl{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.dayb .dn{font-size:17px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+.dayb .db{width:60%;height:3px;border-radius:99px;background:var(--line);overflow:hidden}
+.dayb .db i{display:block;height:100%;background:var(--accent)}
+.dayb.today .dl{color:var(--accent)}
+.dayb.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.dayb.on .dn{color:var(--paper)}
+.dayb.on .db{background:color-mix(in srgb, var(--paper) 25%, transparent)}
+
+/* a meal: Today's row for the prep tick, then the four picks as tiles */
+.meal + .meal{border-top:1px solid var(--line-soft)}
+.meal .row{border-top:0;min-height:48px;padding-bottom:4px}
+.meal .hstreak{font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.mtiles{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 16px 8px 52px;margin:0}
+.mtile{
+  position:relative;display:flex;flex-direction:column;justify-content:center;gap:1px;min-height:50px;
+  padding:6px 10px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line-soft);min-width:0;
+}
+.mtile .tl{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);
+}
+.mtile .tv{font-size:14.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtile.empty .tv{color:var(--ink-3)}
+.mtile select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
+.mtile:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.mnote{
+  display:block;width:calc(100% - 68px);margin:0 16px 12px 52px;padding:6px 0;
+  background:none;border:0;border-bottom:1px solid var(--line-soft);font-size:14px;color:var(--ink-2);
+}
+.mnote::placeholder{color:var(--ink-3)}
+.mnote:focus{outline:none;border-bottom-color:var(--accent)}
+
+/* groceries */
+.seg{display:flex;gap:3px;padding:3px;border-radius:12px;background:var(--line-soft)}
+.seg button{
+  flex:1;min-height:42px;padding:8px 12px;background:none;border:0;border-radius:9px;cursor:pointer;
+  font-size:14px;font-weight:500;color:var(--ink-2);
+}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.seg .ct{
+  display:inline-block;min-width:20px;margin-left:6px;padding:1px 6px;border-radius:99px;
+  background:var(--accent);color:var(--accent-ink);font-size:11.5px;font-variant-numeric:tabular-nums;
+}
+.find{display:flex;gap:6px}
+.find input{
+  flex:1;min-width:0;min-height:46px;padding:10px 14px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--line);font-size:16px;color:var(--ink);
+}
+.find input::placeholder{color:var(--ink-3)}
+.find .btn{min-height:46px;padding:0 16px;font-size:14px}
+.gi .gtext{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.gi .gsub{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:.03em;
+  color:var(--ink-3);overflow-wrap:anywhere;
+}
+.gi.keep[aria-pressed="true"] .label{color:var(--ink);text-decoration:none}
+.gi .ed{
+  flex:none;width:44px;height:44px;margin-right:-10px;display:flex;align-items:center;justify-content:center;
+  background:none;border:0;border-radius:10px;cursor:pointer;color:var(--ink-3);opacity:.6;
+}
+.gi .ed svg{width:15px;height:15px}
+.gi .ed:hover{opacity:1;color:var(--ink)}
+.gedit{border-top:1px solid var(--line-soft);background:var(--surface-2)}
+.gedit .dpad input{font-family:inherit;font-size:16px}
+.row2{display:flex;gap:6px;flex-wrap:wrap}
+.row2 .btn{flex:1;min-height:44px}
+.lempty{padding:18px 16px;display:flex;flex-direction:column;gap:10px}
+.lempty p{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.55}
+.lpanel{border:1px solid var(--line-soft);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow)}
+.lpanel .dpad textarea{font-family:"IBM Plex Sans",sans-serif;font-size:15px;min-height:7.5em}
+.nsync{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nsync .pane-sub{margin:0}
+.nsync .pane-sub.err{color:var(--danger)}
+.nsync .btn{padding:8px 12px;min-height:44px;font-size:12.5px}
+/* Ask: questions to the Routines Console server. Same surfaces and type as the list. */
+.ask-view{display:flex;flex-direction:column;gap:10px;padding-top:18px}
+.ask-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ask-bar .eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);min-width:0;overflow-wrap:anywhere;
+}
+.ask-acts{display:flex;gap:6px;flex-wrap:wrap}
+.ask-acts .btn{padding:10px 12px;font-size:13px;min-height:44px}
+.ask-setup{border:1px solid var(--line-soft);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.ask-turn{
+  display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:11px;
+  background:var(--surface);border:1px solid var(--line-soft);
+}
+.ask-turn.you{background:var(--accent-soft);border-color:transparent;align-self:flex-end;max-width:85%;border-bottom-right-radius:4px}
+.ask-turn:not(.you){border-bottom-left-radius:4px}
+.ask-turn .who{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);
+}
+.ask-turn.you .who{color:var(--accent)}
+.ask-turn p{margin:0;font-size:14.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.ask-turn.err p{color:var(--danger)}
+.ask-turn.wait p{color:var(--ink-3);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px}
+.ask-trace{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:4px}
+.ask-trace li{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;color:var(--ink-2);
+  border:1px solid var(--line-soft);border-radius:6px;padding:3px 6px;
+}
+.ask-trace li.bad{color:var(--danger);border-color:var(--danger)}
+.ask-suggest{display:flex;flex-direction:column;gap:6px}
+.ask-suggest .btn{justify-content:flex-start;text-align:left;font-size:14px;color:var(--ink-2);min-height:48px}
+.ask-form{display:flex;gap:8px;align-items:flex-end}
+.ask-form textarea{
+  flex:1;min-width:0;min-height:48px;max-height:160px;resize:none;
+  background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px;
+  font-family:inherit;font-size:16px;line-height:1.4;color:var(--ink);
+}
+.ask-form .btn{min-height:48px}
+.ask-form .btn:disabled{opacity:.5;cursor:default}
+
 @media (prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important}
 }
@@ -519,6 +684,9 @@ details[open] summary .chev{transform:rotate(180deg)}
 
 <div class="wrap">
   <div id="stats" hidden></div>
+  <div id="meals" hidden></div>
+  <div id="groceries" hidden></div>
+  <div id="chat" hidden></div>
   <div id="quoteHost"></div>
   <div id="sections"></div>
   <div class="dnote" id="dayNote" hidden></div>
@@ -531,6 +699,15 @@ details[open] summary .chev{transform:rotate(180deg)}
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
   <span id="fabLabel">Edit list</span>
 </button>
+
+<nav class="tabs" id="tabs" aria-label="Sections">
+  <div class="tabs-inner">
+    <button class="tab" type="button" data-tab="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 10"/></svg><span>Today</span></button>
+    <button class="tab" type="button" data-tab="meals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a2 2 0 0 0 4 0V3M7 10v11M17 21V3c-2 0-3.5 2.5-3.5 6s1.5 4 3.5 4"/></svg><span>Meals</span></button>
+    <button class="tab" type="button" data-tab="groceries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg><span>Groceries</span></button>
+    <button class="tab" type="button" data-tab="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12Z"/></svg><span>Ask</span></button>
+  </div>
+</nav>
 
 <script>
 (function(){
@@ -627,6 +804,43 @@ function migrate(doc){
   return doc;
 }
 
+/* ---------- lists: meals and groceries ----------
+   Two standing lists beside the daily one. Neither belongs to a day: they live on
+   the document and sync with it, but never touch the log, the streaks or the 2am
+   rollover. Each carries its own mtime so it merges on its own (see mergeDocs). */
+var LIST_KEYS=["groceries","meals"];
+var MEAL_FIELDS=[
+  {k:"main",label:"Main"},{k:"side",label:"Veg & nuts"},{k:"fruit",label:"Fruit"},{k:"drink",label:"Drink"}
+];
+var WEEKDAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+/* a generic starter set; the owner's real options arrive by import, never in this file */
+var MEAL_SEED={
+  main:[["Oatmeal","Breakfast"],["Eggs","Breakfast"],["Chicken","Meat"],["Salmon","Fish"],["Pasta","Pasta"]],
+  side:[["Broccoli","Vegetable"],["Carrots","Vegetable"],["Rice","Starch"],["Potatoes","Starch"],["Almonds","Nuts"]],
+  fruit:[["Apple","Fruit"],["Banana","Fruit"],["Berries","Fruit"]],
+  drink:[["Water","Water"],["Milk","Dairy"],["Protein shake","Protein"]]
+};
+function seedOptions(){
+  var o={};
+  MEAL_FIELDS.forEach(function(f){
+    o[f.k]=MEAL_SEED[f.k].map(function(x){ return {name:x[0],type:x[1]}; });
+  });
+  return o;
+}
+/* Fill in whatever a document is missing. Run on local state only - never on a
+   remote copy before merging, or the empty defaults would look like real data. */
+function shapeLists(doc){
+  if(!doc) return doc;
+  if(!doc.groceries||!Array.isArray(doc.groceries.items)) doc.groceries={items:[],mtime:0};
+  if(!doc.meals||typeof doc.meals!=="object") doc.meals={slots:null,options:null,plan:{},mtime:0};
+  var m=doc.meals;
+  if(!Array.isArray(m.slots)||!m.slots.length) m.slots=["Breakfast","Lunch","Dinner"];
+  if(!m.options||typeof m.options!=="object") m.options=seedOptions();
+  MEAL_FIELDS.forEach(function(f){ if(!Array.isArray(m.options[f.k])) m.options[f.k]=[]; });
+  if(!m.plan||typeof m.plan!=="object") m.plan={};
+  return doc;
+}
+
 var state;
 try{ state=JSON.parse(lsGet(KEY)||"null"); }catch(e){ state=null; }
 if(!state) state=JSON.parse(JSON.stringify(DEFAULT));
@@ -639,6 +853,7 @@ if(typeof state.midQuote!=="string") state.midQuote="";
 var wasV=state.v;
 migrate(state);
 if(state.v!==wasV) saveLocal();
+shapeLists(state);
 var editing=false;
 
 /* ---------- sync config ---------- */
@@ -652,6 +867,16 @@ try{ pending=JSON.parse(lsGet(PENDKEY)||"null"); }catch(e){ pending=null; }
 /* a setup link carries the project, never the secret key. older links carried
    the key too - still honoured, so devices set up before this change keep
    working until the key is rotated. */
+var ASKPEND="routines.askPending";
+(function readServerHash(){
+  var m=/[#&]c=([A-Za-z0-9_\-]+)/.exec(location.hash||"");
+  if(!m) return;
+  try{
+    var next=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,"+").replace(/_/g,"/")))));
+    if(next.u&&/^https:\/\//.test(next.u)) lsSet(ASKPEND,next.u);
+    history.replaceState(null,"",location.pathname+location.search);
+  }catch(e){}
+})();
 (function readHash(){
   var m=/[#&]s=([A-Za-z0-9_\-]+)/.exec(location.hash||"");
   if(!m) return;
@@ -672,6 +897,11 @@ try{ pending=JSON.parse(lsGet(PENDKEY)||"null"); }catch(e){ pending=null; }
 })();
 
 function setupLink(){
+  if(askCfg){
+    var c=btoa(unescape(encodeURIComponent(JSON.stringify({u:askCfg.url}))))
+          .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+    return location.origin+location.pathname+"#c="+c;
+  }
   if(!cfg) return "";
   var b=btoa(unescape(encodeURIComponent(JSON.stringify({url:cfg.url,anon:cfg.anon}))))
         .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
@@ -682,6 +912,20 @@ var sync={state:"off",msg:"Local only",at:0};
 function setSync(s,msg){ sync.state=s; sync.msg=msg; paintChip(); }
 
 function rpc(fn,body){
+  /* Through the Routines server: it holds the Supabase details and the row's key, so
+     this device sends only its server key and the document. */
+  if(cfg.via==="server"){
+    return fetch(cfg.url+"/api/doc",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.key},
+      body:JSON.stringify(fn==="routines_get"?{op:"get"}:{op:"put",d:body.d})
+    }).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(d){
+        if(!r.ok) throw new Error(d.error||("Routines server "+r.status));
+        return fn==="routines_get"?(d.doc||null):null;
+      });
+    });
+  }
   var base=String(cfg.url).replace(/\/+$/,"");
   return fetch(base+"/rest/v1/rpc/"+fn,{
     method:"POST",
@@ -703,6 +947,15 @@ function mergeDocs(local,remote){
      otherwise blank a pad this device already holds. */
   if(typeof out.scratch!=="string")
     out.scratch=typeof older.scratch==="string"?older.scratch:"";
+  /* Groceries and meals each carry their own mtime and merge on it, not on the
+     document's. A habit ticked offline on one device must not roll back a grocery
+     list edited on another, and an older build that has never seen these fields
+     must not erase them. */
+  LIST_KEYS.forEach(function(k){
+    var a=local[k], b=remote[k];
+    var pick = !a ? b : !b ? a : ((b.mtime||0)>(a.mtime||0) ? b : a);
+    if(pick) out[k]=JSON.parse(JSON.stringify(pick));
+  });
   return out;
 }
 
@@ -732,17 +985,19 @@ function pull(){
        and it was the push right here that used to turn that mistake into a second
        row and still report "Synced". Say so, and send nothing. */
     if(!remote||!remote.sections){
-      if(!cfg.mint){
+      /* Through the server, an empty row means no device has saved yet - a wrong key
+         is refused outright - so this device's list goes up. */
+      if(!cfg.mint&&cfg.via!=="server"){
         setSync("err","No list on that key");
         sync.detail="Nothing is stored under this secret key, so nothing was uploaded from here. Check it matches the device that has your list, character for character.";
         return;
       }
-      delete cfg.mint; lsSet(CFGKEY,JSON.stringify(cfg));
+      if(cfg.via!=="server"){ delete cfg.mint; lsSet(CFGKEY,JSON.stringify(cfg)); }
       setSync("ok","Synced");
       return push();
     }
     var before=JSON.stringify(state);
-    state=mergeDocs(state,migrate(remote));
+    state=shapeLists(mergeDocs(state,migrate(remote)));
     saveLocal();
     markClean();
     if(JSON.stringify(state)!==before) render();
@@ -908,6 +1163,9 @@ var ICON={
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   right:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
   cloud:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .3-9A6 6 0 0 0 6.2 11 3.5 3.5 0 0 0 7 19Z"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  bag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>',
+  cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.2 11h10.6L20 8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>',
   disk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M9 3v6h6V3M8 21v-6h8v6"/></svg>'
 };
 
@@ -940,11 +1198,10 @@ function paintChip(){
   var c=$("chip");
   c.className="chip"+(statusTone()?" "+statusTone():"");
   $("chipText").textContent=sync.msg;
-  var ss=document.querySelector("#syncPanel .sstat");
-  if(ss){
+  Array.prototype.forEach.call(document.querySelectorAll("#syncPanel .sstat, #serverPanel .sstat"),function(ss){
     ss.className="sstat"+(statusTone()?" "+statusTone():"");
     ss.lastChild.textContent=sync.msg;
-  }
+  });
 }
 
 function renderHeader(){
@@ -1421,7 +1678,8 @@ function renderEditTools(){
     save(); render();
   });
   box.appendChild(addSec);
-  box.appendChild(syncPanel());
+  box.appendChild(serverPanel());
+  if(!askCfg) box.appendChild(syncPanel());
 
   var det=document.createElement("details");
   det.appendChild(summaryRow("up","Undo a list change",null));
@@ -1454,7 +1712,8 @@ function renderEditTools(){
         var next=JSON.parse(sn.body);
         if(!next.sections) throw new Error("bad");
         next.log=state.log;
-        state=migrate(next);
+        LIST_KEYS.forEach(function(k){ if(state[k]) next[k]=state[k]; });
+        state=shapeLists(migrate(next));
         save(); editing=false; render();
       }catch(e){ alert("That copy could not be read."); }
     });
@@ -1466,6 +1725,8 @@ function renderEditTools(){
   /* the whole document as text. it is a wall of JSON, so it lives behind its own
      disclosure - the snapshots above are the everyday undo; this is the escape
      hatch that survives losing the device. */
+  box.appendChild(importPanel());
+
   var textDet=document.createElement("details");
   textDet.appendChild(summaryRow("disk","Keep a text copy",null));
   var tpad=document.createElement("div"); tpad.className="dpad";
@@ -1482,7 +1743,7 @@ function renderEditTools(){
     try{
       var next=JSON.parse(ta.value);
       if(!next.sections) throw new Error("bad");
-      state=migrate(next);
+      state=shapeLists(migrate(next));
       save(); editing=false; render();
     }catch(e){ alert("That text isn't a valid copy — check that you pasted the whole thing."); }
   });
@@ -1733,23 +1994,871 @@ function renderNote(){
     n.textContent="This browser is blocking local storage, so checkmarks won't survive a reload here. Open the page directly in Safari or Chrome.";
   }else if(cfg){
     n.className="note";
-    n.textContent="Synced through Supabase. Checkboxes clear themselves at 2:00am.";
+    n.textContent=(cfg.via==="server"?"Synced through your Routines server.":"Synced through Supabase.")+" Checkboxes clear themselves at 2:00am.";
   }else{
     n.className="note";
     n.textContent="Saved on this device. Turn on sync in Edit list to share it with your other devices.";
   }
 }
 
+/* ---------- lists: UI ---------- */
+var shopMode=false, groEditing=null, mealOptsOpen=false;
+
+function mk(tag,cls,text){
+  var n=document.createElement(tag);
+  if(cls) n.className=cls;
+  if(text!=null) n.textContent=text;
+  return n;
+}
+function mkBtn(label,cls,onClick){
+  var b=mk("button","btn"+(cls?" "+cls:""),label); b.type="button";
+  b.addEventListener("click",onClick);
+  return b;
+}
+var groEpoch=0;
+/* quiet: a change Notion doesn't hold (the in-cart tick), so no sync is needed */
+function listStamp(k,quiet){
+  state[k].mtime=Date.now(); save();
+  if(k==="groceries"&&!quiet){ groEpoch++; scheduleNotion(); }
+}
+function touched(it){ it.t=Date.now(); return it; }
+/* Monday is 0, and "today" follows the civil day, so 1am Saturday is still Friday */
+function weekIdx(){ return (nowDay().getDay()+6)%7; }
+function weekStart(){ var d=nowDay(); d.setDate(d.getDate()-weekIdx()); return keyOf(d); }
+
+/* ----- meals ----- */
+function mealKey(i,slot){ return i+"|"+slot; }
+function mealAt(i,slot){ return state.meals.plan[mealKey(i,slot)]||{}; }
+function setMeal(i,slot,k,v){
+  var key=mealKey(i,slot), c=state.meals.plan[key]||(state.meals.plan[key]={});
+  if(v===""||v===false||v==null) delete c[k]; else c[k]=v;
+  if(!Object.keys(c).length) delete state.meals.plan[key];
+  listStamp("meals");
+}
+/* A dropdown grouped by type, like the colour key in a meal sheet. A value that is
+   no longer an option stays selectable, so trimming the options never blanks a plan. */
+function mealSelect(field,value,onChange){
+  var sel=document.createElement("select");
+  sel.appendChild(new Option("—",""));
+  var groups={}, order=[];
+  state.meals.options[field].forEach(function(o){
+    var t=o.type||"";
+    if(!groups[t]){ groups[t]=[]; order.push(t); }
+    groups[t].push(o.name);
+  });
+  var seen=false;
+  order.forEach(function(t){
+    var host=sel;
+    if(t&&order.length>1){ host=document.createElement("optgroup"); host.label=t; sel.appendChild(host); }
+    groups[t].forEach(function(n){ host.appendChild(new Option(n,n)); if(n===value) seen=true; });
+  });
+  if(value&&!seen) sel.appendChild(new Option(value,value));
+  sel.value=value||"";
+  sel.addEventListener("change",function(){ onChange(sel.value); });
+  return sel;
+}
+function mealCounts(){
+  var done=0,total=0;
+  WEEKDAYS.forEach(function(d,i){ state.meals.slots.forEach(function(sl){ total++; if(mealAt(i,sl).done) done++; }); });
+  return {done:done,total:total};
+}
+function mealOptionsPanel(){
+  var box=mk("div","lpanel"), pad=mk("div","dpad");
+  pad.appendChild(mk("p",null,"One option per line. Add a type after a comma to group it in the dropdown, like “Chicken, Meat”."));
+  var areas={};
+  MEAL_FIELDS.forEach(function(f){
+    var lab=mk("label",null,f.label), ta=document.createElement("textarea");
+    ta.id="mo_"+f.k; lab.setAttribute("for",ta.id);
+    ta.value=state.meals.options[f.k].map(function(o){ return o.type? o.name+", "+o.type : o.name; }).join("\n");
+    pad.appendChild(lab); pad.appendChild(ta); areas[f.k]=ta;
+  });
+  var slab=mk("label",null,"Meals each day"), sin=document.createElement("input");
+  sin.id="mo_slots"; slab.setAttribute("for",sin.id);
+  sin.value=state.meals.slots.join(", ");
+  pad.appendChild(slab); pad.appendChild(sin);
+  pad.appendChild(mk("p","hint","Separate with commas, e.g. Breakfast, Lunch, Dinner, Snack."));
+  var row=mk("div","row2");
+  row.appendChild(mkBtn("Save options","primary",function(){
+    MEAL_FIELDS.forEach(function(f){
+      state.meals.options[f.k]=parseOptionLines(areas[f.k].value);
+    });
+    var slots=sin.value.split(",").map(function(x){ return x.trim(); }).filter(Boolean);
+    if(slots.length) state.meals.slots=dedupe(slots);
+    mealOptsOpen=false; listStamp("meals"); render();
+  }));
+  row.appendChild(mkBtn("Cancel","ghost",function(){ mealOptsOpen=false; render(); }));
+  pad.appendChild(row);
+  box.appendChild(pad);
+  return box;
+}
+function dedupe(arr){
+  var seen={};
+  return arr.filter(function(x){ var k=String(x).toLowerCase(); if(seen[k]) return false; seen[k]=1; return true; });
+}
+function parseOptionLines(text){
+  var seen={};
+  return String(text).split("\n").map(function(line){
+    var i=line.lastIndexOf(","), name=line, type="";
+    if(i>0){ name=line.slice(0,i); type=line.slice(i+1); }
+    return {name:name.trim(),type:type.trim()};
+  }).filter(function(o){
+    var k=o.name.toLowerCase();
+    if(!o.name||seen[k]) return false; seen[k]=1; return true;
+  });
+}
+
+var mealDay=null;
+function dayDate(i){ var d=nowDay(); d.setDate(d.getDate()-weekIdx()+i); return d; }
+function mealIcon(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a2 2 0 0 0 4 0V3M7 10v11M17 21V3c-2 0-3.5 2.5-3.5 6s1.5 4 3.5 4"/></svg>'; }
+/* A pick looks like a tile; the real control is a native select laid invisibly over it,
+   so a phone opens its own wheel or sheet and nothing has to imitate one. */
+function mealTile(i,slot,f,value){
+  var tile=mk("label","mtile"+(value?"":" empty"));
+  tile.appendChild(mk("span","tl",f.label));
+  tile.appendChild(mk("span","tv",value||"Choose"));
+  var sel=mealSelect(f.k,value,function(v){ setMeal(i,slot,f.k,v); render(); });
+  sel.setAttribute("aria-label",WEEKDAYS[i]+" "+slot+" "+f.label);
+  tile.appendChild(sel);
+  return tile;
+}
+function renderMeals(){
+  if(mealDay==null) mealDay=weekIdx();
+  var host=$("meals"); host.innerHTML="";
+  var pane=mk("div","pane"), head=mk("div","pane-head"), t=mk("div"), c=mealCounts();
+  t.appendChild(mk("h2",null,"Meal prep"));
+  t.appendChild(mk("div","pane-sub","Week of "+fmtDay(weekStart())+" · "+c.done+" / "+c.total+" prepped"));
+  head.appendChild(t); pane.appendChild(head);
+  var meter=mk("div","lmeter"), fill=mk("i"); fill.style.width=(c.total?c.done/c.total*100:0)+"%";
+  meter.appendChild(fill); pane.appendChild(meter);
+  if(mealOptsOpen) pane.appendChild(mealOptionsPanel());
+
+  var ti=weekIdx(), strip=mk("div","days");
+  strip.setAttribute("role","tablist"); strip.setAttribute("aria-label","Day of the week");
+  WEEKDAYS.forEach(function(name,i){
+    var dn=0; state.meals.slots.forEach(function(sl){ if(mealAt(i,sl).done) dn++; });
+    var b=mk("button","dayb"+(i===mealDay?" on":"")+(i===ti?" today":"")); b.type="button";
+    b.setAttribute("role","tab"); b.setAttribute("aria-selected",i===mealDay?"true":"false");
+    b.setAttribute("aria-label",name+(i===ti?", today":"")+", "+dn+" of "+state.meals.slots.length+" prepped");
+    b.appendChild(mk("span","dl",name.slice(0,3)));
+    b.appendChild(mk("span","dn",String(dayDate(i).getDate())));
+    var bar=mk("span","db"), bf=mk("i"); bf.style.width=(dn/state.meals.slots.length*100)+"%"; bar.appendChild(bf); b.appendChild(bar);
+    b.addEventListener("click",function(){ mealDay=i; render(); });
+    strip.appendChild(b);
+  });
+  pane.appendChild(strip);
+
+  var i=mealDay, name=WEEKDAYS[i], card=mk("div","sec"), sh=mk("div","sec-head");
+  var dn=0; state.meals.slots.forEach(function(sl){ if(mealAt(i,sl).done) dn++; });
+  sh.innerHTML=mealIcon();
+  sh.appendChild(mk("span","sec-title",name+(i===ti?" · today":"")));
+  sh.appendChild(mk("span","sec-count",dn+"/"+state.meals.slots.length));
+  card.appendChild(sh);
+  state.meals.slots.forEach(function(slot){
+    var cell=mealAt(i,slot), meal=mk("div","meal");
+    var row=mk("button","row"); row.type="button";
+    row.setAttribute("aria-pressed",cell.done?"true":"false");
+    row.innerHTML='<span class="box">'+ICON.check+'</span><span class="label"></span><span class="hstreak"></span>';
+    row.querySelector(".label").textContent=slot;
+    row.querySelector(".hstreak").textContent=cell.done?"Prepped":"";
+    row.setAttribute("aria-label",slot+(cell.done?", prepped":", not prepped"));
+    row.addEventListener("click",function(){ setMeal(i,slot,"done",!mealAt(i,slot).done); buzz(); render(); });
+    meal.appendChild(row);
+    var tiles=mk("div","mtiles");
+    MEAL_FIELDS.forEach(function(f){ tiles.appendChild(mealTile(i,slot,f,cell[f.k])); });
+    meal.appendChild(tiles);
+    var note=document.createElement("input"); note.className="mnote";
+    note.placeholder="Add a note"; note.value=cell.note||""; note.setAttribute("aria-label",name+" "+slot+" note");
+    note.addEventListener("input",function(){ setMeal(i,slot,"note",note.value); });
+    meal.appendChild(note);
+    card.appendChild(meal);
+  });
+  pane.appendChild(card);
+
+  var foot=mk("div","pane-foot");
+  var ob=mk("button","linkbtn",mealOptsOpen?"Close options":"Edit options"); ob.type="button";
+  ob.addEventListener("click",function(){ mealOptsOpen=!mealOptsOpen; render(); if(mealOptsOpen) window.scrollTo(0,0); });
+  var nb=mk("button","linkbtn","Start a new week"); nb.type="button";
+  nb.addEventListener("click",function(){
+    if(!confirm("Start a new week? Prepped ticks and notes clear. Your meal choices stay.")) return;
+    Object.keys(state.meals.plan).forEach(function(k){
+      var cl=state.meals.plan[k]; delete cl.done; delete cl.note;
+      if(!Object.keys(cl).length) delete state.meals.plan[k];
+    });
+    listStamp("meals"); render();
+  });
+  foot.appendChild(ob); foot.appendChild(nb); pane.appendChild(foot);
+  host.appendChild(pane);
+}
+
+/* ----- groceries ----- */
+function firstStore(it){ return (String(it.store||"").split(",")[0]||"").trim()||"Anywhere"; }
+function groupBy(items,keyFn){
+  var groups={}, order=[];
+  items.forEach(function(it){ var k=keyFn(it); if(!groups[k]){ groups[k]=[]; order.push(k); } groups[k].push(it); });
+  return order.map(function(k){ return {name:k,items:groups[k]}; });
+}
+function datalist(id,values){
+  var dl=document.createElement("datalist"); dl.id=id;
+  dedupe(values.filter(Boolean)).forEach(function(v){ dl.appendChild(new Option(v)); });
+  return dl;
+}
+function allStores(){
+  var out=[];
+  state.groceries.items.forEach(function(it){ String(it.store||"").split(",").forEach(function(x){ if(x.trim()) out.push(x.trim()); }); });
+  return out;
+}
+var groFind="";
+function groRow(it,mode){
+  var on = mode==="shop" ? !!it.got : !!it.need;
+  var row=mk("div","row gi"+(mode==="shop"?"":" keep"));
+  row.setAttribute("role","checkbox"); row.setAttribute("aria-checked",on?"true":"false");
+  row.setAttribute("aria-pressed",on?"true":"false"); row.tabIndex=0;
+  row.innerHTML='<span class="box">'+ICON.check+'</span>';
+  var tx=mk("span","gtext"); tx.appendChild(mk("span","label",it.name));
+  var also=String(it.store||"").split(",").slice(1).map(function(x){ return x.trim(); }).filter(Boolean).join(", ");
+  var bits = mode==="shop" ? [also?"also "+also:"", it.note] : [it.store, it.note];
+  var sub=bits.filter(Boolean).join(" · ");
+  if(sub) tx.appendChild(mk("span","gsub",sub));
+  row.appendChild(tx);
+  function flip(){
+    if(mode==="shop"){ it.got=!it.got; buzz(); listStamp("groceries",true); render(); return; }
+    it.need=!it.need; if(!it.need) delete it.got; touched(it);
+    buzz(); listStamp("groceries"); render();
+  }
+  row.addEventListener("click",flip);
+  row.addEventListener("keydown",function(e){ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); flip(); } });
+  if(mode!=="shop"){
+    var ed=mk("button","ed"); ed.type="button"; ed.innerHTML=ICON.edit; ed.setAttribute("aria-label","Edit "+it.name);
+    ed.addEventListener("click",function(e){ e.stopPropagation(); groEditing = groEditing===it.id ? null : it.id; render(); });
+    row.appendChild(ed);
+  }
+  return row;
+}
+function groEditor(it){
+  var box=mk("div","gedit"), pad=mk("div","dpad");
+  var fName=field("Item",it.name,""), fGroup=field("Food group",it.group,"Fruits & Vegetables"),
+      fStore=field("Store",it.store,"One store, or several with commas"), fNote=field("Note",it.note,"Quantity, brand, code");
+  fGroup.input.setAttribute("list","dl_groups"); fStore.input.setAttribute("list","dl_stores");
+  [fName,fGroup,fStore,fNote].forEach(function(f){ f.input.autocapitalize="sentences"; pad.appendChild(f); });
+  var row=mk("div","row2");
+  row.appendChild(mkBtn("Save","primary",function(){
+    var n=fName.input.value.trim(); if(!n) return;
+    it.name=n; it.group=fGroup.input.value.trim(); it.store=fStore.input.value.trim(); it.note=fNote.input.value.trim();
+    touched(it); groEditing=null; listStamp("groceries"); render();
+  }));
+  row.appendChild(mkBtn("Delete","ghost danger",function(){
+    if(!confirm("Delete "+it.name+" from your grocery list?")) return;
+    state.groceries.items=state.groceries.items.filter(function(x){ return x!==it; });
+    tombstone(it.id);
+    groEditing=null; listStamp("groceries"); render();
+  }));
+  pad.appendChild(row); box.appendChild(pad);
+  return box;
+}
+function groCard(title,count,items,mode){
+  var card=mk("div","sec"), sh=mk("div","sec-head");
+  sh.innerHTML=ICON[mode==="shop"?"cart":"bag"];
+  sh.appendChild(mk("span","sec-title",title));
+  sh.appendChild(mk("span","sec-count",count));
+  card.appendChild(sh);
+  var rows=mk("div","rows");
+  items.forEach(function(it){
+    rows.appendChild(groRow(it,mode));
+    if(mode!=="shop"&&groEditing===it.id) rows.appendChild(groEditor(it));
+  });
+  card.appendChild(rows);
+  return card;
+}
+function renderGroceries(){
+  var host=$("groceries"); host.innerHTML="";
+  var items=state.groceries.items, need=items.filter(function(it){ return it.need; });
+  var pane=mk("div","pane"), head=mk("div","pane-head"), t=mk("div");
+  t.appendChild(mk("h2",null,"Groceries"));
+  t.appendChild(mk("div","pane-sub",need.length+" needed · "+items.length+" on your list"));
+  head.appendChild(t); pane.appendChild(head);
+  if(askCfg){
+    var ns=mk("div","nsync"), nl=mk("div","pane-sub"); nl.id="notionState";
+    ns.appendChild(nl);
+    var sb=mk("button","linkbtn","Sync now"); sb.type="button"; sb.addEventListener("click",function(){ scheduleNotion(0); });
+    ns.appendChild(sb);
+    pane.appendChild(ns);
+  }
+  pane.appendChild(datalist("dl_groups",items.map(function(it){ return it.group; })));
+  pane.appendChild(datalist("dl_stores",allStores()));
+
+  var seg=mk("div","seg");
+  [["List",false],["Shop",true]].forEach(function(o){
+    var b=mk("button",shopMode===o[1]?"on":null,o[0]); b.type="button";
+    if(o[1]&&need.length) b.appendChild(mk("span","ct",String(need.length)));
+    b.setAttribute("aria-pressed",shopMode===o[1]?"true":"false");
+    b.addEventListener("click",function(){ shopMode=o[1]; groEditing=null; groFind=""; render(); window.scrollTo(0,0); });
+    seg.appendChild(b);
+  });
+  pane.appendChild(seg);
+
+  if(shopMode){
+    if(!need.length){
+      var e1=mk("div","sec"), ep=mk("div","lempty");
+      ep.appendChild(mk("p",null,"Nothing on the list. Switch to List and tap what you need."));
+      e1.appendChild(ep); pane.appendChild(e1);
+    }
+    groupBy(need,firstStore).forEach(function(g){
+      var got=g.items.filter(function(it){ return it.got; }).length;
+      pane.appendChild(groCard(g.name,got+"/"+g.items.length,g.items,"shop"));
+    });
+    var gotAll=need.filter(function(it){ return it.got; });
+    if(gotAll.length) pane.appendChild(mkBtn("Finish shopping · clear "+gotAll.length+" bought","primary",function(){
+      gotAll.forEach(function(it){ it.need=false; delete it.got; touched(it); });
+      listStamp("groceries"); render();
+    }));
+  } else {
+    /* one box finds and adds: type to filter, and if nothing matches exactly, Add makes it */
+    var find=mk("form","find"), fin=document.createElement("input");
+    fin.placeholder="Find or add an item"; fin.value=groFind; fin.setAttribute("aria-label","Find or add an item");
+    fin.autocapitalize="sentences"; fin.enterKeyHint="done";
+    var exact=groFind.trim()&&findGrocery(groFind);
+    var add=mk("button","btn primary","Add"); add.type="submit"; add.hidden=!groFind.trim()||!!exact;
+    find.appendChild(fin); find.appendChild(add);
+    fin.addEventListener("input",function(){
+      groFind=fin.value; var pos=fin.selectionStart; render();
+      var again=document.querySelector("#groceries .find input"); if(again){ again.focus(); try{ again.setSelectionRange(pos,pos); }catch(e){} }
+    });
+    find.addEventListener("submit",function(e){
+      e.preventDefault();
+      var n=groFind.trim(); if(!n) return;
+      var hit=findGrocery(n);
+      if(hit){ hit.need=true; touched(hit); }
+      else { hit=touched({id:uid(),name:n,group:"",store:"",note:"",need:true}); state.groceries.items.push(hit); groEditing=hit.id; }
+      groFind=""; listStamp("groceries"); render();
+    });
+    pane.appendChild(find);
+
+    var q=groFind.trim().toLowerCase();
+    var shown=q? items.filter(function(it){ return it.name.toLowerCase().indexOf(q)>=0; }) : items;
+    if(!items.length){
+      var e2=mk("div","sec"), ep2=mk("div","lempty");
+      ep2.appendChild(mk("p",null,"Keep everything you buy here, then tap what you need. Type an item above, or paste a whole sheet with Import below."));
+      e2.appendChild(ep2); pane.appendChild(e2);
+    } else if(!shown.length){
+      var e3=mk("div","sec"), ep3=mk("div","lempty");
+      ep3.appendChild(mk("p",null,"Nothing called “"+groFind.trim()+"” yet. Tap Add to put it on your list."));
+      e3.appendChild(ep3); pane.appendChild(e3);
+    }
+    groupBy(shown,function(it){ return it.group||"Other"; }).forEach(function(g){
+      var n=g.items.filter(function(it){ return it.need; }).length;
+      pane.appendChild(groCard(g.name,n?n+" needed":"",g.items,"list"));
+    });
+    pane.appendChild(importPanel());
+  }
+  host.appendChild(pane);
+}
+function findGrocery(name){
+  var k=String(name).trim().toLowerCase(), hit=null;
+  state.groceries.items.forEach(function(it){ if(it.name.toLowerCase()===k) hit=it; });
+  return hit;
+}
+
+/* ----- import ----------
+   One paste box for three things. A grocery sheet copied from Sheets or Excel
+   arrives as tab-separated rows; a CSV export as comma-separated; an import
+   prepared by Claude as JSON with any of habits, groceries and meals. Nothing is
+   ever deleted: matching rows update, new ones are added. */
+function parseTable(text){
+  var sep=text.indexOf("\t")>=0?"\t":",", rows=[], row=[], cell="", q=false;
+  for(var i=0;i<text.length;i++){
+    var ch=text[i];
+    if(q){
+      if(ch==='"'){ if(text[i+1]==='"'){ cell+='"'; i++; } else q=false; }
+      else cell+=ch;
+    }
+    else if(ch==='"'&&cell==="") q=true;
+    else if(ch===sep){ row.push(cell); cell=""; }
+    else if(ch==="\n"){ row.push(cell); rows.push(row); row=[]; cell=""; }
+    else if(ch!=="\r") cell+=ch;
+  }
+  row.push(cell); rows.push(row);
+  return rows.filter(function(r){ return r.some(function(c){ return c.trim(); }); });
+}
+function truthy(v){ return /^(true|yes|y|1|x|✓|✔)$/i.test(String(v).trim()); }
+function importGroceries(list){
+  var added=0, updated=0;
+  list.forEach(function(g){
+    var name=String(g.name||"").trim(); if(!name) return;
+    var hit=findGrocery(name);
+    if(!hit){ hit={id:uid(),name:name,group:"",store:"",note:"",need:false}; state.groceries.items.push(hit); added++; }
+    else updated++;
+    if(g.group!=null) hit.group=String(g.group).trim();
+    if(g.store!=null) hit.store=String(g.store).trim();
+    if(g.note!=null) hit.note=String(g.note).trim();
+    if(g.need!=null) hit.need=g.need===true||truthy(g.need);
+    touched(hit);
+  });
+  if(added||updated){ state.groceries.mtime=Date.now(); groEpoch++; }
+  return {added:added,updated:updated};
+}
+function groceriesFromTable(rows){
+  var h=-1;
+  for(var i=0;i<rows.length&&h<0;i++){
+    if(rows[i].some(function(c){ return /^\s*(item|name)\s*$/i.test(c); })) h=i;
+  }
+  if(h<0) throw new Error("Couldn't find a header row with an Item column. Copy the sheet including its header row.");
+  var cols={};
+  rows[h].forEach(function(c,i){
+    var k=c.trim().toLowerCase();
+    if(/^(item|name)$/.test(k)) cols.name=i;
+    else if(/^need/.test(k)) cols.need=i;
+    else if(/group|category|aisle/.test(k)) cols.group=i;
+    else if(/store|shop/.test(k)) cols.store=i;
+    else if(/qty|quantity|note/.test(k)) cols.note=i;
+  });
+  return rows.slice(h+1).map(function(r){
+    var g={name:r[cols.name]};
+    ["need","group","store","note"].forEach(function(k){ if(cols[k]!=null) g[k]=r[cols[k]]||""; });
+    return g;
+  });
+}
+function importHabits(sections){
+  var added=0, have={};
+  state.sections.forEach(function(sec){ sec.items.forEach(function(it){ have[it.label.trim().toLowerCase()]=1; }); });
+  sections.forEach(function(src){
+    var title=String(src.title||"").trim(); if(!title) return;
+    var sec=null;
+    state.sections.forEach(function(x){ if(x.title.trim().toLowerCase()===title.toLowerCase()) sec=x; });
+    (src.items||[]).forEach(function(label){
+      label=String(label).trim(); if(!label||have[label.toLowerCase()]) return;
+      if(!sec){ sec={id:uid(),icon:src.icon==="moon"?"moon":"sun",title:title,items:[]}; state.sections.push(sec); }
+      sec.items.push({id:uid(),label:label}); have[label.toLowerCase()]=1; added++;
+    });
+  });
+  if(added) touchToday();
+  return added;
+}
+function importMeals(src){
+  var n=0;
+  if(src.options) MEAL_FIELDS.forEach(function(f){
+    var list=src.options[f.k]; if(!Array.isArray(list)) return;
+    state.meals.options[f.k]=parseOptionLines(list.map(function(o){
+      return Array.isArray(o)? o.join(", ") : (o.type? o.name+", "+o.type : String(o.name||o));
+    }).join("\n"));
+    n++;
+  });
+  if(Array.isArray(src.slots)&&src.slots.length){ state.meals.slots=dedupe(src.slots.map(String)); n++; }
+  /* plan entries look like {day:"Monday", meal:"Breakfast", drink:"Milk"} */
+  if(Array.isArray(src.plan)) src.plan.forEach(function(e){
+    var i=WEEKDAYS.map(function(d){ return d.toLowerCase(); }).indexOf(String(e.day||"").trim().toLowerCase());
+    var slot=String(e.meal||"").trim(); if(i<0||!slot) return;
+    var key=mealKey(i,slot), cell=state.meals.plan[key]||(state.meals.plan[key]={});
+    MEAL_FIELDS.forEach(function(f){ if(e[f.k]) cell[f.k]=String(e[f.k]); });
+    if(e.note) cell.note=String(e.note);
+    if(!Object.keys(cell).length) delete state.meals.plan[key]; else n++;
+  });
+  if(n) state.meals.mtime=Date.now();
+  return n;
+}
+function runImport(text){
+  text=String(text||"").trim();
+  if(!text) throw new Error("Paste something first.");
+  var said=[];
+  if(text[0]==="{"){
+    var data;
+    try{ data=JSON.parse(text); }catch(e){ throw new Error("That looks like JSON but doesn't parse. Check you copied all of it."); }
+    if(Array.isArray(data.habits)){ var h=importHabits(data.habits); said.push(h+" habit"+(h===1?"":"s")+" added"); }
+    if(Array.isArray(data.groceries)){ var g=importGroceries(data.groceries); said.push(g.added+" grocery items added, "+g.updated+" updated"); }
+    if(data.meals){ var m=importMeals(data.meals); said.push(m?"meal options updated":"no meal options found"); }
+    if(!said.length) throw new Error("Nothing to import. Expected habits, groceries or meals.");
+  } else {
+    var r=importGroceries(groceriesFromTable(parseTable(text)));
+    if(!r.added&&!r.updated) throw new Error("No grocery rows found under the header.");
+    said.push(r.added+" grocery items added, "+r.updated+" updated");
+  }
+  save();
+  if(/grocery/.test(said.join(" "))) scheduleNotion();
+  return said.join("; ")+".";
+}
+function importPanel(){
+  var det=document.createElement("details");
+  det.appendChild(summaryRow("plus","Import habits, meals or groceries",null));
+  var pad=mk("div","dpad");
+  pad.appendChild(mk("p",null,"Paste a grocery sheet copied from Google Sheets or Excel, header row included (Item, Need, Food group, Store), or an import Claude prepared for you. Matching items update and new ones are added. Nothing is deleted."));
+  var ta=document.createElement("textarea"); ta.setAttribute("aria-label","Text to import"); ta.id="importText";
+  var msg=mk("p","hint"); msg.hidden=true;
+  var go=mkBtn("Import","primary",function(){
+    try{
+      var said=runImport(ta.value);
+      ta.value=""; render();
+      alert("Imported: "+said);
+    }catch(e){ msg.textContent=e.message; msg.hidden=false; }
+  });
+  pad.appendChild(ta); pad.appendChild(msg); pad.appendChild(go);
+  det.appendChild(pad);
+  return det;
+}
+
+/* ---------- ask ----------
+   Questions go to the Routines Console server (its own repo, on Vercel), which
+   answers with Claude and can read and write Notion. Off until configured, like
+   sync. The console key lives only in this device's storage: never in the
+   document, never in a setup link. Each question carries a plain-text snapshot
+   of the tracker so Claude can talk about it; nothing comes back into it. */
+var ASKCFG="routines.ask", ASKLOG="routines.askLog";
+function readJSON(k){ try{ return JSON.parse(lsGet(k)||"null"); }catch(e){ return null; } }
+var askCfg=readJSON(ASKCFG);
+if(!askCfg||!askCfg.url||!askCfg.key) askCfg=null;
+/* The server stands in for Supabase in the sync code. mint: through the server an
+   empty row is a first save, not a mistyped key (see pull). */
+function serverCfg(){ return askCfg? {via:"server",url:askCfg.url,key:askCfg.key,mint:true} : null; }
+function directCfg(){ try{ return JSON.parse(lsGet(CFGKEY)||"null"); }catch(e){ return null; } }
+/* history must alternate user/assistant from a user turn, or the server rejects it */
+var askLog=(function(a){
+  if(!Array.isArray(a)) return [];
+  for(var i=0;i<a.length;i++){
+    if(!a[i]||typeof a[i].content!=="string"||a[i].role!==(i%2?"assistant":"user")) return [];
+  }
+  return a;
+})(readJSON(ASKLOG));
+var askBusy=false, askDraft="", askNote="", askNoteTrace=null, askEditing=!askCfg, askTraces={};
+
+function saveAskLog(){
+  var a=askLog.slice(-40);
+  if(a.length&&a[0].role!=="user") a=a.slice(1);
+  lsSet(ASKLOG,JSON.stringify(a));
+}
+
+/* What Claude sees of the tracker: today's list with ticks, streaks, two weeks of
+   scores. Scored with the same functions as the stats view, so the numbers agree. */
+function askContext(){
+  var t=doneOn(day), lines=[];
+  lines.push("Date: "+day+" ("+fmtDay(day,true)+"). Done today: "+t.done+" of "+t.total+".");
+  state.sections.forEach(function(sec){
+    if(!sec.items.length) return;
+    lines.push("");
+    lines.push((sec.title||"Untitled")+":");
+    sec.items.forEach(function(it){
+      var st=itemStreak(it.id);
+      lines.push("- ["+(isDone(it.id)?"x":" ")+"] "+it.label+(st>=STREAK_MIN?" (streak "+st+" days)":""));
+    });
+  });
+  lines.push("");
+  lines.push("Full-day streak: "+curStreak()+" days (best "+bestStreak()+"). Only 100% days count toward it.");
+  var keys=rangeKeys(14);
+  if(keys.length) lines.push("Last "+keys.length+" days: "+keys.map(function(k){
+    return k.slice(5)+" "+Math.round(pctOn(k)*100)+"%";
+  }).join(", ")+".");
+  var need=state.groceries.items.filter(function(it){ return it.need; });
+  lines.push("");
+  lines.push("Groceries needed: "+(need.length?need.length:"none")+".");
+  groupBy(need,firstStore).forEach(function(g){
+    lines.push("- "+g.name+": "+g.items.map(function(it){ return it.name+(it.note?" ("+it.note+")":""); }).join(", "));
+  });
+  lines.push("");
+  lines.push("Meal plan, week of "+weekStart()+":");
+  WEEKDAYS.forEach(function(d,i){
+    var parts=state.meals.slots.map(function(sl){
+      var c=mealAt(i,sl), picks=MEAL_FIELDS.map(function(f){ return c[f.k]; }).filter(Boolean);
+      return picks.length? sl+": "+picks.join(", ")+(c.done?" (prepped)":"") : "";
+    }).filter(Boolean);
+    if(parts.length) lines.push("- "+d+(i===weekIdx()?" (today)":"")+": "+parts.join("; "));
+  });
+  return lines.join("\n").slice(0,12000);
+}
+
+/* Who answered: the server runs Claude or OpenAI, whichever key it has. */
+function askWho(){ return lsGet("routines.askWho")||"Assistant"; }
+function noteWho(model){
+  var m=String(model||"");
+  lsSet("routines.askWho", /^claude/i.test(m)?"Claude":/^gpt|^o\d/i.test(m)?"ChatGPT":"Assistant");
+}
+var TOOL_NAMES={
+  notion_search:"Searched Notion", notion_list_rows:"Read a database", notion_read_page:"Read a page",
+  notion_create_page:"Added to Notion", notion_append_text:"Wrote in Notion"
+};
+function askTurn(role,text,trace,kind){
+  var t=document.createElement("div");
+  t.className="ask-turn"+(role==="user"?" you":"")+(kind?" "+kind:"");
+  var w=document.createElement("div"); w.className="who"; w.textContent=role==="user"?"You":askWho();
+  t.appendChild(w);
+  if(trace&&trace.length){
+    var ul=document.createElement("ul"); ul.className="ask-trace"; ul.setAttribute("aria-label","Tools used");
+    trace.forEach(function(c){
+      var li=document.createElement("li");
+      if(!c.ok) li.className="bad";
+      li.textContent=(TOOL_NAMES[c.tool]||c.tool.replace(/_/g," "))+(c.ok?"":" \u2014 failed");
+      li.title=c.ok?(c.detail||""):(c.error||"");
+      ul.appendChild(li);
+    });
+    t.appendChild(ul);
+  }
+  String(text).split(/\n{2,}/).forEach(function(para){
+    if(!para.trim()) return;
+    var pEl=document.createElement("p"); pEl.textContent=para; t.appendChild(pEl);
+  });
+  return t;
+}
+
+function askButton(label,cls,onClick){
+  var b=document.createElement("button"); b.type="button"; b.className="btn"+(cls?" "+cls:"");
+  b.textContent=label; b.addEventListener("click",onClick);
+  return b;
+}
+
+function askSetup(host){
+  var box=document.createElement("div"); box.className="ask-setup";
+  var pad=document.createElement("div"); pad.className="dpad";
+  var intro=document.createElement("p");
+  intro.textContent="Connect this device to your Routines server once. It syncs your list with your other devices, turns on Ask, and keeps groceries in step with Notion. The key stays on this device.";
+  pad.appendChild(intro);
+  var fUrl=field("Server address", askCfg?askCfg.url:(lsGet(ASKPEND)||""), "https://your-server.up.railway.app");
+  var fKey=field("Server key", "", askCfg?"Saved. Paste a new one to replace it.":"The key you set as CONSOLE_SECRET");
+  fKey.input.type="password"; fKey.input.autocomplete="current-password";
+  pad.appendChild(fUrl); pad.appendChild(fKey);
+  var msg=document.createElement("p"); msg.className="hint"; msg.hidden=true; pad.appendChild(msg);
+  function say(t){ msg.textContent=t; msg.hidden=!t; }
+  var acts=document.createElement("div"); acts.className="ask-acts";
+  var go=askButton("Connect","primary",function(){
+    var url=fUrl.input.value.trim().replace(/\/+$/,"");
+    var key=fKey.input.value.trim()||(askCfg&&askCfg.url===url?askCfg.key:"");
+    if(!/^https:\/\/[^\s/]+/i.test(url)){ say("The address must start with https://"); return; }
+    if(!key){ say("Paste the server key."); return; }
+    go.disabled=true; go.textContent="Checking…"; say("");
+    fetch(url+"/api/status",{headers:{"Authorization":"Bearer "+key}}).then(function(res){
+      if(res.status===401) throw new Error("That key didn't match the server.");
+      if(!res.ok) return res.json().catch(function(){ return {}; }).then(function(d){
+        throw new Error((d&&d.error)||("The server answered "+res.status+"."));
+      });
+      askCfg={url:url,key:key}; lsSet(ASKCFG,JSON.stringify(askCfg)); lsDel(ASKPEND);
+      askEditing=false; cfg=serverCfg(); render(); pull(); scheduleNotion(2500);
+    }).catch(function(e){
+      go.disabled=false; go.textContent="Connect";
+      say(e instanceof TypeError
+        ? "Couldn't reach that address. Check it, and that the server allows this site."
+        : e.message);
+    });
+  });
+  acts.appendChild(go);
+  if(askCfg){
+    acts.appendChild(askButton("Cancel","ghost",function(){ askEditing=false; renderChat(); }));
+    acts.appendChild(askButton("Disconnect","danger",function(){
+      if(!confirm("Disconnect this device from your Routines server? Its list stays here, but stops syncing until you connect again.")) return;
+      askCfg=null; lsDel(ASKCFG); askEditing=true; cfg=directCfg();
+      setSync(cfg?"busy":"off",cfg?"Syncing…":"Local only"); render(); if(cfg) pull();
+    }));
+  }
+  pad.appendChild(acts);
+  box.appendChild(pad); host.appendChild(box);
+}
+
+/* One place in Edit list for the only setup a device needs. */
+function serverPanel(){
+  var det=document.createElement("details"); det.id="serverPanel";
+  det.appendChild(summaryRow("cloud","Routines server",askCfg?{tone:statusTone(),text:sync.msg}:{tone:"",text:lsGet(ASKPEND)?"Connect":"Not connected"}));
+  if(!askCfg){
+    if(lsGet(ASKPEND)) det.open=true;
+    var wrapS=mk("div"); askSetup(wrapS); det.appendChild(wrapS);
+    return det;
+  }
+  var pad=mk("div","dpad");
+  pad.appendChild(mk("p",null,"Connected to "+askCfg.url.replace(/^https:\/\//,"")+". Your list syncs through it, Ask uses it, and groceries stay in step with Notion."));
+  var link=setupLink();
+  pad.appendChild(mk("p","hint","To add another device, open this link there and type your server key once. The link never contains the key."));
+  var ta=document.createElement("textarea"); ta.readOnly=true; ta.value=link; ta.setAttribute("aria-label","Setup link"); ta.rows=2;
+  pad.appendChild(ta);
+  var row=mk("div","row2");
+  var cb=mkBtn("Copy setup link","primary",function(){ copy(ta,cb,"Copy setup link"); });
+  row.appendChild(cb);
+  row.appendChild(mkBtn("Change server","ghost",function(){ askEditing=true; view="chat"; endEdit(); render(); window.scrollTo(0,0); }));
+  pad.appendChild(row);
+  det.appendChild(pad);
+  return det;
+}
+
+function renderChat(){
+  var host=$("chat"); host.innerHTML="";
+  var wrap=document.createElement("div"); wrap.className="ask-view";
+  host.appendChild(wrap);
+  var hd=mk("div","pane-head"), ht=mk("div");
+  ht.appendChild(mk("h2",null,"Ask"));
+  ht.appendChild(mk("div","pane-sub","AI, with your day, meals, groceries and Notion"));
+  hd.appendChild(ht); wrap.appendChild(hd);
+  if(!askCfg||askEditing){ askSetup(wrap); return; }
+
+
+  if(!askLog.length&&!askBusy&&!askNote){
+    var sg=document.createElement("div"); sg.className="ask-suggest";
+    ["What's left on my list today?","How did the last two weeks go?","Which habit do I miss most?"].forEach(function(q){
+      sg.appendChild(askButton(q,"ghost",function(){ askSend(q); }));
+    });
+    wrap.appendChild(sg);
+  }
+  askLog.forEach(function(m,i){ wrap.appendChild(askTurn(m.role,m.content,askTraces[i])); });
+  if(askBusy) wrap.appendChild(askTurn("assistant","Thinking… this can take up to a minute.",null,"wait"));
+  if(askNote) wrap.appendChild(askTurn("assistant",askNote,askNoteTrace,"err"));
+
+  var form=document.createElement("form"); form.className="ask-form";
+  var ta=document.createElement("textarea"); ta.rows=1; ta.value=askDraft;
+  ta.placeholder="Ask about your routines or your Notion…";
+  ta.setAttribute("aria-label","Message");
+  ta.addEventListener("input",function(){ askDraft=ta.value; });
+  ta.addEventListener("keydown",function(e){
+    if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); askSend(ta.value); }
+  });
+  var send=document.createElement("button"); send.type="submit"; send.className="btn primary";
+  send.textContent="Send"; send.disabled=askBusy;
+  form.addEventListener("submit",function(e){ e.preventDefault(); askSend(ta.value); });
+  form.appendChild(ta); form.appendChild(send); wrap.appendChild(form);
+
+  var foot=mk("div","pane-foot");
+  if(askLog.length){
+    var nc=mk("button","linkbtn","New chat"); nc.type="button";
+    nc.addEventListener("click",function(){ if(askBusy) return; askLog=[]; askTraces={}; askNote=""; lsDel(ASKLOG); renderChat(); });
+    foot.appendChild(nc);
+  }
+  var st=mk("button","linkbtn","Server settings"); st.type="button";
+  st.addEventListener("click",function(){ askEditing=true; renderChat(); });
+  foot.appendChild(st); wrap.appendChild(foot);
+}
+
+function askSend(text){
+  text=String(text||"").trim();
+  if(!text||askBusy||!askCfg) return;
+  askLog.push({role:"user",content:text});
+  askDraft=""; askNote=""; askNoteTrace=null; askBusy=true;
+  renderChat(); window.scrollTo(0,document.body.scrollHeight);
+  var tz=""; try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone||""; }catch(e){}
+  fetch(askCfg.url+"/api/chat",{
+    method:"POST",
+    headers:{"Authorization":"Bearer "+askCfg.key,"Content-Type":"application/json"},
+    body:JSON.stringify({messages:askLog.slice(-39),timeZone:tz,context:askContext()})
+  }).then(function(res){
+    return res.json().catch(function(){ return {}; }).then(function(d){ return {status:res.status,data:d||{}}; });
+  }).then(function(r){
+    if(r.status===200&&typeof r.data.reply==="string"){
+      noteWho(r.data.model);
+      askLog.push({role:"assistant",content:r.data.reply});
+      askTraces[askLog.length-1]=r.data.trace||[];
+      saveAskLog();
+      return;
+    }
+    askLog.pop(); askDraft=text; askNoteTrace=r.data.trace||null;
+    askNote = r.status===401
+      ? "Your server key was rejected. Open Server settings and paste it again."
+      : (r.data.error||("Your server answered "+r.status+"."));
+  },function(){
+    askLog.pop(); askDraft=text;
+    askNote="Couldn't reach your Routines server. Check your connection and send again.";
+  }).then(function(){
+    askBusy=false;
+    if(view==="chat"){ renderChat(); window.scrollTo(0,document.body.scrollHeight); }
+  });
+}
+
+/* ---------- groceries ⇄ Notion ----------
+   With the console connected, the grocery list and a Notion database stay in step both
+   ways. The app sends its whole list (each item with t, its last edit here, and s, when
+   it last matched Notion) plus the ids it deleted; the console reconciles item by item
+   and returns the merged list, which replaces this one. Runs a few seconds after a
+   change, when the app opens, and when it comes back to the foreground. The cart tick
+   (got) never leaves the device - it only means something mid-shop. */
+var notionSync={state:"",at:0,msg:""}, notionTimer=null, notionBusy=false, notionAgain=false, notionLast=0;
+function tombstone(id){
+  var d=state.groceries.deleted||(state.groceries.deleted=[]);
+  if(d.indexOf(id)<0) d.push(id);
+  if(d.length>300) d.splice(0,d.length-300);
+}
+function scheduleNotion(ms){
+  if(!askCfg) return;
+  clearTimeout(notionTimer);
+  notionTimer=setTimeout(syncNotion, ms==null?4000:ms);
+}
+/* on open and on return: at most once a minute, so flicking between apps costs nothing */
+function freshenNotion(){
+  if(askCfg&&!notionBusy&&Date.now()-notionLast>60000) scheduleNotion(1500);
+}
+function syncNotion(){
+  if(!askCfg) return;
+  if(notionBusy){ notionAgain=true; return; }
+  notionBusy=true; notionLast=Date.now(); notionSync={state:"busy",at:0,msg:""}; paintNotion();
+  var epoch=groEpoch, sentDeleted=(state.groceries.deleted||[]).slice();
+  var items=state.groceries.items.map(function(it){
+    var o={id:it.id,name:it.name,need:!!it.need,group:it.group||"",store:it.store||"",note:it.note||""};
+    if(it.t) o.t=it.t; if(it.s) o.s=it.s;
+    return o;
+  });
+  fetch(askCfg.url+"/api/groceries",{
+    method:"POST",
+    headers:{"Authorization":"Bearer "+askCfg.key,"Content-Type":"application/json"},
+    body:JSON.stringify({items:items,deleted:sentDeleted})
+  }).then(function(res){
+    return res.json().catch(function(){ return {}; }).then(function(d){ return {status:res.status,data:d||{}}; });
+  }).then(function(r){
+    if(r.status!==200||!Array.isArray(r.data.items)){
+      notionSync={state:"err",at:0,msg:r.data.error||("Notion sync failed ("+r.status+").")};
+      return;
+    }
+    notionSync={state:"ok",at:Date.now(),msg:""};
+    /* edited while this was in flight: the reply is already stale, so go again */
+    if(epoch!==groEpoch){ notionAgain=true; return; }
+    applyNotion(r.data.items, sentDeleted);
+  },function(){
+    notionSync={state:"err",at:0,msg:"Couldn't reach your Routines server, so Notion wasn't synced."};
+  }).then(function(){
+    notionBusy=false; paintNotion();
+    if(notionAgain){ notionAgain=false; syncNotion(); }
+  });
+}
+function applyNotion(items,sentDeleted){
+  var got={}, before=JSON.stringify(state.groceries.items);
+  state.groceries.items.forEach(function(it){ if(it.got) got[it.id]=1; });
+  state.groceries.items=items.map(function(x){
+    var it={id:x.id,name:x.name,group:x.group||"",store:x.store||"",note:x.note||"",need:!!x.need};
+    if(x.t) it.t=x.t; if(x.s) it.s=x.s;
+    if(got[it.id]&&it.need) it.got=true;
+    return it;
+  });
+  /* the deletes just sent are done; keep any made since */
+  state.groceries.deleted=(state.groceries.deleted||[]).filter(function(id){ return sentDeleted.indexOf(id)<0; });
+  /* stamp the list so other devices take it, but don't sync it straight back */
+  state.groceries.mtime=Date.now(); save();
+  if(JSON.stringify(state.groceries.items)!==before&&view==="groceries") render();
+}
+function notionLabel(){
+  if(notionSync.state==="busy") return "Syncing with Notion…";
+  if(notionSync.state==="err") return notionSync.msg;
+  if(notionSync.state==="ok"){
+    var m=Math.round((Date.now()-notionSync.at)/60000);
+    return "Synced with Notion "+(m<1?"just now":m+" min ago");
+  }
+  return "Syncs with Notion both ways";
+}
+function paintNotion(){
+  var el=document.getElementById("notionState");
+  if(!el) return;
+  el.textContent=notionLabel();
+  el.className="pane-sub"+(notionSync.state==="err"?" err":"");
+}
+
 function render(){
   if(drag) stopDrag(false);
-  var onStats = view==="stats";
-  ["wordmark","meter","quoteHost","sections","dayNote","editTools","log","note","fab"].forEach(function(id){
-    $(id).hidden = onStats;
+  var onStats = view==="stats", onList = view==="list";
+  ["meter","quoteHost","sections","dayNote","editTools","log","note","fab"].forEach(function(id){
+    $(id).hidden = !onList;
   });
+  $("wordmark").hidden = onStats;
   $("back").hidden = !onStats;
   $("stats").hidden = !onStats;
+  $("meals").hidden = view!=="meals";
+  $("groceries").hidden = view!=="groceries";
+  $("chat").hidden = view!=="chat";
+  $("tabs").hidden = onStats;
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){
+    var on=b.getAttribute("data-tab")===view;
+    b.classList.toggle("on",on);
+    if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+  });
   renderHeader();
   if(onStats){ renderStats(); return; }
+  if(view==="meals"){ renderMeals(); return; }
+  if(view==="groceries"){ renderGroceries(); paintNotion(); return; }
+  if(view==="chat"){ renderChat(); return; }
   renderQuote(); renderSections(); renderDayNote(); renderEditTools(); renderLog(); renderNote();
   $("fabLabel").textContent = editing? "Done" : "Edit list";
   $("fab").classList.toggle("on", editing);
@@ -1801,6 +2910,16 @@ window.addEventListener("popstate",function(){
   window.scrollTo(0,0);
 });
 $("back").addEventListener("click",goList);
+/* Tabs swap the top-level view in place. No history entry: back from Meals should
+   leave the app the way it would from the list, not walk through every tab. */
+Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){
+  b.addEventListener("click",function(){
+    var next=b.getAttribute("data-tab");
+    if(next===view) { window.scrollTo({top:0,behavior:"smooth"}); return; }
+    endEdit(); groEditing=null; mealOptsOpen=false;
+    view=next; render(); window.scrollTo(0,0);
+  });
+});
 
 /* Delegated: the hosts are emptied and refilled on every render, never replaced. */
 function chartClick(e){
@@ -1819,6 +2938,7 @@ $("stats").addEventListener("click",chartClick);
 
 $("chip").addEventListener("click",function(){
   if(cfg&&sync.state!=="busy"){ pull(); return; }
+  if(!cfg&&lsGet(ASKPEND)){ view="chat"; render(); window.scrollTo(0,0); return; }
   editing=true; render();
   var p=document.getElementById("syncPanel");
   if(p){ p.open=true; p.scrollIntoView({behavior:"smooth",block:"center"}); }
@@ -1830,10 +2950,11 @@ setInterval(function(){
 },20000);
 document.addEventListener("visibilitychange",function(){
   if(document.hidden) return;
+  freshenNotion();
   var t=today(); if(t!==day) day=t;
   render(); pull();
 });
-window.addEventListener("focus",function(){ pull(); });
+window.addEventListener("focus",function(){ pull(); freshenNotion(); });
 window.addEventListener("resize",function(){
   var host=$("dayNote");
   if(!host||host.hidden) return;
@@ -1841,11 +2962,15 @@ window.addEventListener("resize",function(){
 });
 
 markClean();
+if(askCfg) cfg=serverCfg();
+else if(lsGet(ASKPEND)&&!cfg) setSync("off","Connect");
 if(cfg) setSync("busy","Syncing…");
 /* arrived on a setup link: the panel lives in edit mode, so say so on the chip -
    tapping it opens the panel, which is where the secret key gets pasted. */
 else if(pending) setSync("off","Finish setup");
 render();
 if(cfg) pull();
+/* after the Supabase pull has had a moment, so a fresh device syncs the merged list */
+if(askCfg) setTimeout(freshenNotion, 1500);
 })();
 </script>

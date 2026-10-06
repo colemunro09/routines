@@ -6,7 +6,8 @@ Context for working on this repo. Read before editing `index.html`.
 
 A personal daily habit checklist, built for the owner. It installs to an iPhone home
 screen and a Mac dock, checkmarks reset at 2:00am, and the day rolls into a 14-day log
-with a streak counter. A standing scratch pad sits under the list. Optional Supabase sync keeps
+with a streak counter. A standing scratch pad sits under the list. Two more tabs hold
+standing lists that never reset: a weekly meal-prep grid and a master grocery list. Optional Supabase sync keeps
 devices on the same list, and a service worker keeps it opening with no network.
 
 Live at https://colemunro09.github.io/routines/ — GitHub Pages serves `main` at the repo
@@ -28,7 +29,9 @@ root. **Pushing to `main` deploys.** Redeploy takes about a minute.
   and the font `<link>`. It renders fine as a standalone page and stays publishable as a
   Claude Artifact. Meta tags for iOS standalone mode are injected by JS at startup.
 - **The only external request is Google Fonts.** Anything else breaks the Artifact preview
-  and adds a failure mode on a phone with bad signal.
+  and adds a failure mode on a phone with bad signal. The two exceptions are both optional
+  and silent until the person configures them on that device: Supabase sync and the
+  Routines Console (Ask, and grocery sync with Notion).
 - ES5-flavored JS (`var`, `function`, no optional chaining). Not a hard requirement, but the
   file is consistent — match it.
 
@@ -45,10 +48,12 @@ URL, anon key, or secret key. None of those are in the repo today; keep it that 
 
 1. `<title>` and the Google Fonts link
 2. `<style>` — CSS custom properties in `:root`, then components
-3. Static markup — sticky header, `#quoteHost`, `#sections`, `#editTools`, `#log`, the FAB
+3. Static markup — sticky header, `#stats`, `#meals`, `#groceries`, `#chat`, `#quoteHost`,
+   `#sections`, `#editTools`, `#log`, the FAB, the bottom tab bar
 4. `<script>` — one IIFE, in this order: meta injection, storage helpers, `DEFAULT`,
-   `LESSONS`, state load and migration, sync config and transport, date helpers, icons,
-   render functions, event wiring
+   `LESSONS`, the list constants and `shapeLists`, state load and migration, sync config
+   and transport, date helpers, icons, render functions, the meals/groceries/import UI,
+   the Ask view and the Notion copy, `render()`, event wiring
 
 The two quote slots are picked each civil day from `LESSONS` plus `quote` and
 `midQuote` on the document. Edit mode still edits those two personal lines; it
@@ -70,9 +75,32 @@ does not edit the standing questions.
       note: "…"              // leftover per-day notes, still shown in stats if present
     }
   },
+  groceries: {
+    items: [ { id, name, group, store, note, need: true, got: false,
+               t: …,         // last edited here (ms)
+               s: … } ],     // last matched Notion (ms)
+    deleted: [ id ],         // deleted here, not yet sent to Notion
+    mtime: …                 // its own clock - see "Sync design"
+  },
+  meals: {
+    slots: ["Breakfast","Lunch","Dinner"],
+    options: { main|side|fruit|drink: [ { name, type } ] },   // dropdown contents, grouped by type
+    plan: { "0|Breakfast": { main, side, fruit, drink, done, note } },  // 0 = Monday
+    mtime: …
+  },
   mtime: 1755993600000                        // last local edit, drives sync merge
 }
 ```
+
+`groceries` and `meals` are standing lists, not days: nothing in them touches `log`, the
+streaks or the 2am rollover. `store` may list several shops comma-separated; the Shop view
+files an item under the first and shows the rest as "also …". `got` is the in-cart tick
+while shopping; Finish shopping turns `need` off for everything got. New week clears `done`
+and `note` in the meal plan and keeps the choices.
+
+`shapeLists()` fills in either list when missing (meal options start from a generic
+`MEAL_SEED`). Run it on **local** state only - load, after a merge, after a restore. Never
+on a remote copy before `mergeDocs`, or its empty defaults would look like real data.
 
 Item order lives in the arrays themselves. Dragging a row moves the element in the DOM as
 the finger travels and rebuilds every section's `items` from that DOM order on drop, so a
@@ -105,6 +133,17 @@ is written straight back to local storage so each device stamps it once, early.
 it when applying a *remote* change, or you'll ping-pong.
 
 ## Sync design
+
+**Through the Routines server (the normal setup).** A device connected to the server
+(`routines.ask`) syncs through it: `serverCfg()` stands in for `cfg`, and `rpc()` sends
+`/api/doc` `{op:"get"}` / `{op:"put", d}` with the server key. The server holds the
+Supabase URL, anon key and the row's secret key and calls the same two functions below,
+so devices never hold Supabase details. Through the server an empty row means no device
+has saved yet (a wrong key is refused with 401, not an empty row), so the first device
+pushes. Its setup link is `#c=` and carries the server address only; the new device types
+the server key once. Everything after this paragraph describes the older direct mode,
+which a device uses only while it isn't connected to a server.
+
 
 Supabase Postgres, reached over PostgREST RPC. Two functions, `routines_get(k)` and
 `routines_put(k, d)`, both `security definer`. RLS is on for the `routines` table with **no
@@ -148,8 +187,65 @@ day level (`Object.assign({}, older.log, newer.log)`). That way a morning checke
 phone isn't erased by a laptop that's been open since yesterday. Don't "simplify" this into
 a whole-document overwrite.
 
+`groceries` and `meals` also merge on their own, each by its own `mtime`, never the
+document's. A habit ticked offline on one device would otherwise roll back a grocery list
+edited on another, and an older build that has never seen these fields would erase them
+on its next push. Every edit to either list goes through `listStamp()`, which bumps that
+list's `mtime` and then saves. "Undo a list change" restores habits only and carries the
+current lists across.
+
 Pull happens on load, on focus, and on visibility change. Push is debounced ~1.2s after a
 change.
+
+## Import
+
+One paste box, in Today's edit tools and at the foot of Groceries, takes three shapes:
+a grocery sheet copied from Sheets or Excel (tab-separated, header row with `Item` and
+any of `Need`, `Food group`, `Store`, `Quantity`/`Note`), the same as CSV, or JSON with any
+of `habits`, `groceries` and `meals` (options, slots, and a plan of
+`{day, meal, main|side|fruit|drink, note}` entries). Matching rows update by name, new ones
+are added, nothing is deleted, so running the same import twice is harmless. Habits
+dedupe by label across every section and land in a section matched by title.
+
+The owner's real lists come in through this box from a file kept outside the repo. Like
+the habits in `DEFAULT`, `MEAL_SEED` stays generic.
+
+## Ask and the Notion copy
+
+The fourth tab talks to the **Routines Console**, a separate repo (`routines-console`) that
+runs on Vercel or any Node host (Railway: `npm start`). It runs an AI with Notion tools -
+Claude when the server has a Claude key, otherwise OpenAI - and the app labels replies
+with whichever answered (`askWho`). The app never calls an AI itself, so no AI key is in
+this file.
+
+- Config is `{url, key}` under `routines.ask`, typed once per device. Like the sync secret
+  it is never in the document and never in a setup link. It is also the device's sync
+  connection - see "Sync design". A `#c=` link leaves the address in `routines.askPending`
+  and the chip says Connect.
+- The conversation is plain text under `routines.askLog`: last 40 turns, always starting
+  with a user turn, or the server rejects it.
+- Each question carries `askContext()`: today's list with ticks, streaks, two weeks of
+  scores, the groceries needed by store, and this week's meal plan, computed with the same
+  functions the tabs use. Read-only - nothing the server returns changes the app.
+- With the console connected, groceries sync with a Notion database **both ways**:
+  four seconds after a change, about 3s after the app opens, and on returning to the
+  foreground (at most once a minute). The app sends its whole list with each item's `t`
+  and `s` plus `deleted`; the console reconciles item by item (`reconcile()` in the
+  console repo) and returns the merged list, which replaces the app's.
+  - Edited only here since `s`: the app wins. Changed only in Notion: Notion wins. Both:
+    the later edit wins; Notion stamps to the minute, so a same-minute tie goes to the app.
+  - A row made in Notion (no Routines ID) is claimed: given an id and added here.
+  - Deleted here: the id rides in `deleted` and only that row is trashed. An item missing
+    here but not in `deleted` - another device added it - comes back instead.
+  - Deleted in Notion: dropped here, unless it was edited here since `s`.
+  - Every grocery edit must go through `touched(item)` (sets `t`) and `listStamp`. A
+    deletion must call `tombstone(id)`. The in-cart tick passes `quiet` to `listStamp`:
+    Notion never holds it, so it needn't sync.
+  - `groEpoch` counts edits. A reply that arrives after an edit made mid-flight is
+    dropped and a fresh sync runs, so a sync can never undo a tap.
+- The console allows only `https://colemunro09.github.io` as an origin (`ALLOWED_ORIGINS`).
+- The service worker ignores cross-origin requests and anything that isn't GET, so console
+  traffic, which carries the key, never lands in the offline cache.
 
 ## Design system
 
@@ -170,8 +266,15 @@ crimson (`#A31F34` light, `#FF3B4E` dark) — the single accent, used for checks
 the streak, and the mid-list quote. Keep it to one, and read it from `:root` rather than
 from this file, which has been wrong about it before.
 
+Meals and Groceries are built from Today's own parts - `.sec` cards, `.row` lines, `.box`
+ticks - so the tabs read as one app; only the week strip and meal tiles are new. A meal
+pick is a styled tile with a native `<select>` laid invisibly over it, so a phone opens its
+own picker. The stats view already owns `.tile`/`.tiles`; the meal tiles are `.mtile`.
+
 Habit rows are ≥54px tall (`.row` carries `min-height:54px`); the stacked `.btn` controls
-are 47px, which still clears the 44pt platform minimum. `prefers-reduced-motion` kills all
+are 47px, which still clears the 44pt platform minimum. Grocery rows are 54px, tabs 56px,
+and every list control is at least 44px. Meal selects and inputs are 16px so iOS doesn't
+zoom on focus. `prefers-reduced-motion` kills all
 transitions — don't add animation that ignores it.
 
 ## Decisions already settled — don't relitigate
