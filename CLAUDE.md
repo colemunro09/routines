@@ -222,6 +222,10 @@ Claude when the server has a Claude key, otherwise OpenAI - and the app labels r
 with whichever answered (`askWho`). The app never calls an AI itself, so no AI key is in
 this file.
 
+- `HOME_SERVER` is the owner's server address, built in on purpose: an address is not a
+  secret, since every request needs the key, so the connect form asks only for the key
+  ("Use a different server" reveals the address field). Never build the key in - the page
+  is public, and anything in it is readable by anyone.
 - Config is `{url, key}` under `routines.ask`, typed once per device. Like the sync secret
   it is never in the document and never in a setup link. It is also the device's sync
   connection - see "Sync design". A `#c=` link leaves the address in `routines.askPending`

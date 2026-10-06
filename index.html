@@ -2512,6 +2512,9 @@ function importPanel(){
    document, never in a setup link. Each question carries a plain-text snapshot
    of the tracker so Claude can talk about it; nothing comes back into it. */
 var ASKCFG="routines.ask", ASKLOG="routines.askLog";
+/* The owner's server. An address is not a secret - every request still needs the key -
+   so it is built in and a device only ever asks for the key. */
+var HOME_SERVER="https://server-production-5580.up.railway.app";
 function readJSON(k){ try{ return JSON.parse(lsGet(k)||"null"); }catch(e){ return null; } }
 var askCfg=readJSON(ASKCFG);
 if(!askCfg||!askCfg.url||!askCfg.key) askCfg=null;
@@ -2616,12 +2619,19 @@ function askSetup(host){
   var box=document.createElement("div"); box.className="ask-setup";
   var pad=document.createElement("div"); pad.className="dpad";
   var intro=document.createElement("p");
-  intro.textContent="Connect this device to your Routines server once. It syncs your list with your other devices, turns on Ask, and keeps groceries in step with Notion. The key stays on this device.";
+  intro.textContent="Enter your server key once and this device remembers it. That syncs your list with your other devices, turns on Ask, and keeps groceries in step with Notion.";
   pad.appendChild(intro);
-  var fUrl=field("Server address", askCfg?askCfg.url:(lsGet(ASKPEND)||""), "https://your-server.up.railway.app");
+  var fUrl=field("Server address", askCfg?askCfg.url:(lsGet(ASKPEND)||HOME_SERVER), "https://your-server.up.railway.app");
   var fKey=field("Server key", "", askCfg?"Saved. Paste a new one to replace it.":"The key you set as CONSOLE_SECRET");
   fKey.input.type="password"; fKey.input.autocomplete="current-password";
   pad.appendChild(fUrl); pad.appendChild(fKey);
+  /* the built-in address needs no attention; show the field only to change it */
+  if(fUrl.input.value===HOME_SERVER){
+    fUrl.hidden=true;
+    var other=mk("button","linkbtn","Use a different server"); other.type="button";
+    other.addEventListener("click",function(){ fUrl.hidden=false; other.hidden=true; fUrl.input.focus(); });
+    pad.appendChild(other);
+  }
   var msg=document.createElement("p"); msg.className="hint"; msg.hidden=true; pad.appendChild(msg);
   function say(t){ msg.textContent=t; msg.hidden=!t; }
   var acts=document.createElement("div"); acts.className="ask-acts";
