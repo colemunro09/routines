@@ -992,11 +992,22 @@ function pull(){
         sync.detail="Nothing is stored under this secret key, so nothing was uploaded from here. Check it matches the device that has your list, character for character.";
         return;
       }
+      delete cfg.join;
       if(cfg.via!=="server"){ delete cfg.mint; lsSet(CFGKEY,JSON.stringify(cfg)); }
       setSync("ok","Synced");
       return push();
     }
     var before=JSON.stringify(state);
+    /* A device joining the server takes the server's copy whole. Merging would let a
+       fresh device's starter list - newer the moment anything on it is ticked - beat
+       the real one. Its own list only goes up when the server holds nothing. */
+    if(cfg.join){
+      delete cfg.join;
+      state=shapeLists(migrate(remote));
+      saveLocal(); markClean(); render();
+      setSync("ok","Synced");
+      return;
+    }
     state=shapeLists(mergeDocs(state,migrate(remote)));
     saveLocal();
     markClean();
@@ -2628,7 +2639,7 @@ function askSetup(host){
       askCfg={url:url,key:key}; lsSet(ASKCFG,JSON.stringify(askCfg)); lsDel(ASKPEND);
       /* the server holds the Supabase details now; don't leave a copy on this device */
       lsDel(CFGKEY); lsDel(PENDKEY); pending=null;
-      askEditing=false; cfg=serverCfg(); render(); pull(); scheduleNotion(2500);
+      askEditing=false; cfg=serverCfg(); cfg.join=true; render(); pull(); scheduleNotion(2500);
     }).catch(function(e){
       go.disabled=false; go.textContent="Connect";
       say(e instanceof TypeError

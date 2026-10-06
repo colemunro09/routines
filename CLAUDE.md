@@ -141,7 +141,9 @@ Supabase URL, anon key and the row's secret key and calls the same two functions
 so devices never hold Supabase details. Through the server an empty row means no device
 has saved yet (a wrong key is refused with 401, not an empty row), so the first device
 pushes. Its setup link is `#c=` and carries the server address only; the new device types
-the server key once. Connecting deletes any direct-mode config (`routines.cfg`) from the device,
+the server key once. A device that has just connected (`cfg.join`) adopts the server's copy whole instead of
+merging: a fresh app's starter list is newer the moment anything on it is ticked, and a
+merge would let it overwrite the real one. Connecting deletes any direct-mode config (`routines.cfg`) from the device,
 so a switched device holds no Supabase details at all. Everything after this paragraph
 describes the older direct mode,
 which a device uses only while it isn't connected to a server.
