@@ -625,6 +625,7 @@ details[open] summary .chev{transform:rotate(180deg)}
 }
 .ask-acts{display:flex;gap:6px;flex-wrap:wrap}
 .ask-acts .btn{padding:10px 12px;font-size:13px;min-height:44px}
+.ask-setup .btn.wide{width:100%;min-height:47px;margin:4px 0 2px}
 .ask-setup{border:1px solid var(--line-soft);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
 .ask-turn{
   display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:11px;
@@ -2615,6 +2616,125 @@ function askButton(label,cls,onClick){
   return b;
 }
 
+/* Face ID / Touch ID. A passkey stands in for typing the server key: the server checks
+   it and hands this device the key, and from then on everything runs as if it had been
+   typed. Turned on once from a device that has the key; iCloud Keychain carries the
+   passkey to the owner's other Apple devices. The server keeps only public keys. */
+var PASSKEY="routines.passkey";
+function canPasskey(){
+  return !!(window.PublicKeyCredential&&navigator.credentials&&window.isSecureContext&&location.protocol==="https:");
+}
+function bioName(){
+  var ua=navigator.userAgent||"";
+  return /iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)? "Face ID"
+       : /Macintosh/.test(ua)? "Touch ID" : "a passkey";
+}
+function b64uBuf(s){
+  s=String(s).replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="=";
+  var b=atob(s), u=new Uint8Array(b.length);
+  for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i);
+  return u.buffer;
+}
+function bufB64u(buf){
+  var u=new Uint8Array(buf), s="";
+  for(var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]);
+  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+function passkeyCall(url,body,key){
+  var h={"Content-Type":"application/json"};
+  if(key) h.Authorization="Bearer "+key;
+  return fetch(url+"/api/passkey",{method:"POST",headers:h,body:JSON.stringify(body)}).then(function(r){
+    return r.json().catch(function(){ return {}; }).then(function(d){
+      if(!r.ok) throw new Error(d.error||("The server answered "+r.status+"."));
+      return d;
+    });
+  });
+}
+function credList(a){
+  return (a||[]).map(function(c){ return {type:"public-key",id:b64uBuf(c.id),transports:c.transports}; });
+}
+function passkeyWhy(e,verb){
+  var n=e&&e.name;
+  if(n==="NotAllowedError") return verb+" was cancelled or timed out.";
+  if(n==="InvalidStateError") return "already";
+  if(n==="SecurityError") return "Passkeys work only on the Routines site itself.";
+  return (e&&e.message)||String(e);
+}
+/* Safari wants a passkey prompt to follow a tap closely. The challenge is fetched on the
+   first tap and kept, so if Safari refuses because the fetch took too long, the next tap
+   opens the prompt straight away. A challenge is good for three minutes. */
+var pkOpts={};
+function pkOptions(kind,url,key){
+  var c=pkOpts[kind];
+  if(c&&c.url===url&&Date.now()-c.at<150000) return c.p;
+  var p=passkeyCall(url,{op:kind==="login"?"login-options":"register-options"},key);
+  pkOpts[kind]={url:url,at:Date.now(),p:p};
+  p.catch(function(){ delete pkOpts[kind]; });
+  return p;
+}
+function passkeyLogin(url){
+  var started;
+  return pkOptions("login",url).then(function(d){
+    if(d.none) throw new Error(bioName()+" sign-in isn't on yet. Connect once with the key, then turn it on under Edit list → Routines server.");
+    var o=d.options; started=Date.now();
+    return navigator.credentials.get({publicKey:{
+      challenge:b64uBuf(o.challenge), rpId:o.rpId, timeout:o.timeout,
+      userVerification:o.userVerification||"required", allowCredentials:credList(o.allowCredentials)
+    }});
+  }).then(function(cred){
+    delete pkOpts.login;
+    var r=cred.response;
+    return passkeyCall(url,{op:"login",response:{
+      id:cred.id, rawId:bufB64u(cred.rawId), type:cred.type, clientExtensionResults:{},
+      response:{
+        clientDataJSON:bufB64u(r.clientDataJSON), authenticatorData:bufB64u(r.authenticatorData),
+        signature:bufB64u(r.signature), userHandle:r.userHandle?bufB64u(r.userHandle):undefined
+      }
+    }});
+  }).then(function(d){ return d.key; }, function(e){
+    /* refused before any prompt showed: keep the challenge so the next tap is instant */
+    if(e&&e.name==="NotAllowedError"&&started&&Date.now()-started<1500) throw new Error("Tap again to use "+bioName()+".");
+    delete pkOpts.login;
+    throw new Error(passkeyWhy(e,bioName()));
+  });
+}
+function passkeyRegister(){
+  var started;
+  return pkOptions("register",askCfg.url,askCfg.key).then(function(d){
+    var o=d.options; started=Date.now();
+    return navigator.credentials.create({publicKey:{
+      rp:o.rp, user:{id:b64uBuf(o.user.id),name:o.user.name,displayName:o.user.displayName},
+      challenge:b64uBuf(o.challenge), pubKeyCredParams:o.pubKeyCredParams, timeout:o.timeout,
+      excludeCredentials:credList(o.excludeCredentials),
+      authenticatorSelection:o.authenticatorSelection, attestation:"none"
+    }});
+  }).then(function(cred){
+    delete pkOpts.register;
+    var r=cred.response;
+    return passkeyCall(askCfg.url,{op:"register",response:{
+      id:cred.id, rawId:bufB64u(cred.rawId), type:cred.type, clientExtensionResults:{},
+      response:{
+        clientDataJSON:bufB64u(r.clientDataJSON), attestationObject:bufB64u(r.attestationObject),
+        transports:r.getTransports?r.getTransports():[]
+      }
+    }},askCfg.key);
+  }).then(function(){ lsSet(PASSKEY,"1"); }, function(e){
+    if(e&&e.name==="NotAllowedError"&&started&&Date.now()-started<1500) throw new Error("Tap again to turn on "+bioName()+".");
+    delete pkOpts.register;
+    var why=passkeyWhy(e,"Setting up "+bioName());
+    /* this Apple ID already holds the passkey: it's on, nothing to add */
+    if(why==="already"){ lsSet(PASSKEY,"1"); return; }
+    throw new Error(why);
+  });
+}
+
+function connectWith(url,key){
+  askCfg={url:url,key:key}; lsSet(ASKCFG,JSON.stringify(askCfg)); lsDel(ASKPEND);
+  /* the server holds the Supabase details now; don't leave a copy on this device */
+  lsDel(CFGKEY); lsDel(PENDKEY); pending=null;
+  askEditing=false; cfg=serverCfg(); cfg.join=true; render(); pull(); scheduleNotion(2500);
+}
+
 function askSetup(host){
   var box=document.createElement("div"); box.className="ask-setup";
   var pad=document.createElement("div"); pad.className="dpad";
@@ -2646,10 +2766,7 @@ function askSetup(host){
       if(!res.ok) return res.json().catch(function(){ return {}; }).then(function(d){
         throw new Error((d&&d.error)||("The server answered "+res.status+"."));
       });
-      askCfg={url:url,key:key}; lsSet(ASKCFG,JSON.stringify(askCfg)); lsDel(ASKPEND);
-      /* the server holds the Supabase details now; don't leave a copy on this device */
-      lsDel(CFGKEY); lsDel(PENDKEY); pending=null;
-      askEditing=false; cfg=serverCfg(); cfg.join=true; render(); pull(); scheduleNotion(2500);
+      connectWith(url,key);
     }).catch(function(e){
       go.disabled=false; go.textContent="Connect";
       say(e instanceof TypeError
@@ -2658,6 +2775,23 @@ function askSetup(host){
     });
   });
   acts.appendChild(go);
+  /* Face ID only where the passkey can live: the built-in server, on the real site */
+  if(canPasskey()&&!askCfg){
+    var bio=askButton("Sign in with "+bioName(),"primary",function(){
+      var url=fUrl.input.value.trim().replace(/\/+$/,"");
+      bio.disabled=true; say("");
+      passkeyLogin(url).then(function(key){
+        lsSet(PASSKEY,"1"); connectWith(url,key);
+      }).catch(function(e){
+        bio.disabled=false;
+        say(e instanceof TypeError? "Couldn't reach the server. Check your connection." : e.message);
+      });
+    });
+    var orKey=mk("p","hint","Or enter your server key:");
+    pad.insertBefore(bio,fKey);
+    pad.insertBefore(orKey,fKey);
+    bio.className+=" wide";
+  }
   if(askCfg){
     acts.appendChild(askButton("Cancel","ghost",function(){ askEditing=false; renderChat(); }));
     acts.appendChild(askButton("Disconnect","danger",function(){
@@ -2668,6 +2802,44 @@ function askSetup(host){
   }
   pad.appendChild(acts);
   box.appendChild(pad); host.appendChild(box);
+}
+
+/* Turn Face ID on from a device that has the key, or switch it off everywhere. */
+function passkeyRow(){
+  var wrap=mk("div"), on=lsGet(PASSKEY)==="1", name=bioName();
+  wrap.appendChild(mk("p","hint", on
+    ? name+" sign-in is on. A new iPhone, iPad or Mac on your Apple ID can sign in with it instead of the key."
+    : "Turn on "+name+" and your other Apple devices can sign in with it instead of typing the key. It syncs through iCloud Keychain."));
+  var msg=mk("p","hint"); msg.hidden=true;
+  var row=mk("div","row2");
+  if(!on){
+    var b=mkBtn("Turn on "+name,"primary",function(){
+      b.disabled=true; msg.hidden=true;
+      passkeyRegister().then(function(){ render(); }).catch(function(e){
+        b.disabled=false; msg.textContent=e instanceof TypeError?"Couldn't reach the server.":e.message; msg.hidden=false;
+      });
+    });
+    row.appendChild(b);
+  }else{
+    /* the flag is this device's memory; another device may have turned it off since */
+    var again=mkBtn("Set up again","ghost",function(){
+      again.disabled=true; msg.hidden=true;
+      passkeyRegister().then(function(){ msg.textContent=name+" is on."; msg.hidden=false; again.disabled=false; }).catch(function(e){
+        again.disabled=false; msg.textContent=e instanceof TypeError?"Couldn't reach the server.":e.message; msg.hidden=false;
+      });
+    });
+    row.appendChild(again);
+    var f=mkBtn("Turn off on all devices","ghost",function(){
+      if(!confirm("Stop "+name+" sign-in on every device? Devices already connected stay connected. You can turn it on again any time.")) return;
+      f.disabled=true;
+      passkeyCall(askCfg.url,{op:"forget"},askCfg.key).then(function(){ lsDel(PASSKEY); render(); }).catch(function(e){
+        f.disabled=false; msg.textContent=e.message; msg.hidden=false;
+      });
+    });
+    row.appendChild(f);
+  }
+  wrap.appendChild(row); wrap.appendChild(msg);
+  return wrap;
 }
 
 /* One place in Edit list for the only setup a device needs. */
@@ -2690,6 +2862,7 @@ function serverPanel(){
   row.appendChild(cb);
   row.appendChild(mkBtn("Change server","ghost",function(){ askEditing=true; view="chat"; endEdit(); render(); window.scrollTo(0,0); }));
   pad.appendChild(row);
+  if(canPasskey()) pad.appendChild(passkeyRow());
   det.appendChild(pad);
   return det;
 }

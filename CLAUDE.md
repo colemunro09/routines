@@ -230,6 +230,18 @@ this file.
   it is never in the document and never in a setup link. It is also the device's sync
   connection - see "Sync design". A `#c=` link leaves the address in `routines.askPending`
   and the chip says Connect.
+- **Face ID / Touch ID sign-in** is a passkey standing in for typing the key. A device
+  that already has the key turns it on (Edit list → Routines server); iCloud Keychain carries
+  the passkey to the owner's other Apple devices, and "Sign in with Face ID" on the connect
+  form gets the key from the server (`/api/passkey`, op `login`) and then connects exactly
+  as if it had been typed (`connectWith`). The server keeps only public keys, in a second
+  Supabase row (`<row key>:passkeys`). Registering and "Turn off on all devices" need the
+  key; signing in needs only the passkey. `routines.passkey` is this device's memory that
+  it's on, nothing more, so the panel also offers "Set up again". Passkeys are bound to the
+  site, so it works only on the real https origin (`canPasskey()`), never off the disk or
+  in an Artifact preview. Safari wants the prompt close to the tap, so the challenge is
+  fetched on the first tap and kept (`pkOpts`): if Safari refuses because the fetch was
+  slow, the next tap opens the prompt at once.
 - The conversation is plain text under `routines.askLog`: last 40 turns, always starting
   with a user turn, or the server rejects it.
 - Each question carries `askContext()`: today's list with ticks, streaks, two weeks of
