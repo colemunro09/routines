@@ -7,8 +7,11 @@ Context for working on this repo. Read before editing `index.html`.
 A personal daily habit checklist, built for the owner. It installs to an iPhone home
 screen and a Mac dock, checkmarks reset at 2:00am, and the day rolls into a 14-day log
 with a streak counter. A standing scratch pad sits under the list. Two more tabs hold
-standing lists that never reset: a weekly meal-prep grid and a master grocery list. Optional Supabase sync keeps
-devices on the same list, and a service worker keeps it opening with no network.
+standing lists that never reset: a weekly meal-prep grid and a master grocery list. With
+a Routines server connected, a one-line "Tell it" box on each tab takes dictation ("Monday
+dinner salmon and rice", "add eggs", "note I ran into Sam") and applies it in place.
+Optional Supabase sync keeps devices on the same list, and a service worker keeps it
+opening with no network.
 
 Live at https://colemunro09.github.io/routines/ — GitHub Pages serves `main` at the repo
 root. **Pushing to `main` deploys.** Redeploy takes about a minute.
@@ -31,7 +34,7 @@ root. **Pushing to `main` deploys.** Redeploy takes about a minute.
 - **The only external request is Google Fonts.** Anything else breaks the Artifact preview
   and adds a failure mode on a phone with bad signal. The two exceptions are both optional
   and silent until the person configures them on that device: Supabase sync and the
-  Routines Console (Ask, and grocery sync with Notion).
+  Routines Console (the Tell it box, and grocery sync with Notion).
 - ES5-flavored JS (`var`, `function`, no optional chaining). Not a hard requirement, but the
   file is consistent — match it.
 
@@ -48,12 +51,12 @@ URL, anon key, or secret key. None of those are in the repo today; keep it that 
 
 1. `<title>` and the Google Fonts link
 2. `<style>` — CSS custom properties in `:root`, then components
-3. Static markup — sticky header, `#stats`, `#meals`, `#groceries`, `#chat`, `#quoteHost`,
-   `#sections`, `#editTools`, `#log`, the FAB, the bottom tab bar
+3. Static markup — sticky header, `#stats`, `#meals`, `#groceries`, `#quoteHost`,
+   `#sections`, `#dayNote`, `#tellToday`, `#editTools`, `#log`, the FAB, the bottom tab bar
 4. `<script>` — one IIFE, in this order: meta injection, storage helpers, `DEFAULT`,
    `LESSONS`, the list constants and `shapeLists`, state load and migration, sync config
    and transport, date helpers, icons, render functions, the meals/groceries/import UI,
-   the Ask view and the Notion copy, `render()`, event wiring
+   the Tell it box and the Notion copy, `render()`, event wiring
 
 The two quote slots are picked each civil day from `LESSONS` plus `quote` and
 `midQuote` on the document. Edit mode still edits those two personal lines; it
@@ -214,9 +217,12 @@ dedupe by label across every section and land in a section matched by title.
 The owner's real lists come in through this box from a file kept outside the repo. Like
 the habits in `DEFAULT`, `MEAL_SEED` stays generic.
 
-## Ask and the Notion copy
+## Tell it and the Notion copy
 
-The fourth tab talks to the **Routines Console**, a separate repo (`routines-console`) that
+There is no AI tab. **The owner asked for that explicitly: the AI lives inside the tabs,
+not in a section of its own.** Each of Today, Meals and Groceries carries a one-line
+"Tell it" box (`tellBox`), shown only while a server is connected and not in edit mode.
+It talks to the **Routines Console**, a separate repo (`routines-console`) that
 runs on Vercel or any Node host (Railway: `npm start`). It runs an AI with Notion tools -
 Claude when the server has a Claude key, otherwise OpenAI - and the app labels replies
 with whichever answered (`askWho`). The app never calls an AI itself, so no AI key is in
@@ -231,7 +237,8 @@ this file.
   connection - see "Sync design". A `#c=` link leaves the address in `routines.askPending`
   and the chip says Connect.
 - **Face ID / Touch ID sign-in** is a passkey standing in for typing the key. A device
-  that already has the key turns it on (Edit list → Routines server); iCloud Keychain carries
+  that already has the key turns it on (Edit list → Routines server, which is also where a
+  device connects and where "Change server" reopens the form); iCloud Keychain carries
   the passkey to the owner's other Apple devices, and "Sign in with Face ID" on the connect
   form gets the key from the server (`/api/passkey`, op `login`) and then connects exactly
   as if it had been typed (`connectWith`). The server keeps only public keys, in a second
@@ -242,9 +249,11 @@ this file.
   in an Artifact preview. Safari wants the prompt close to the tap, so the challenge is
   fetched on the first tap and kept (`pkOpts`): if Safari refuses because the fetch was
   slow, the next tap opens the prompt at once.
-- The conversation is plain text under `routines.askLog`: last 40 turns, always starting
-  with a user turn, or the server rejects it.
-- Each question carries `askContext()`: today's list with ticks, streaks, two weeks of
+- The last few turns stay in memory only (`askLog`, 12 turns, always starting with a
+  user turn or the server rejects it) so a follow-up like "make that Tuesday" works.
+  Nothing is persisted; the old `routines.askLog` key is deleted on load. The last reply
+  (`askLast`) shows under the box on whichever tab is open until Clear or the next send.
+- Each message carries `askContext()`: today's list with ticks, streaks, two weeks of
   scores, the groceries needed by store, and this week's meal plan, computed with the same
   functions the tabs use. It opens with `askRules()`, which tells the model how to change
   the app: when the person says what they want (a meal plan, a shopping list, a note from
@@ -252,10 +261,9 @@ this file.
   `notes`. `takeAskBlock()` strips it from the shown reply and `applyAsk()` applies it -
   the import functions, except that meal options **merge** (a spoken change must never
   wipe the owner's lists) and a plan entry can `clear` a meal. `notes` append to
-  `scratch` with the day's date. What changed shows as chips on the turn (`did`, kept in
-  `routines.askLog` but stripped from what is sent). A plain question gets no block, and
-  a block that doesn't parse leaves the reply as it came. The server needs nothing new
-  for this; dictation is the keyboard mic.
+  `scratch` with the day's date. What changed shows as chips on the reply (`did`). A plain
+  question gets no block, and a block that doesn't parse leaves the reply as it came. The
+  server needs nothing new for this; dictation is the keyboard mic.
 - With the console connected, groceries sync with a Notion database **both ways**:
   four seconds after a change, about 3s after the app opens, and on returning to the
   foreground (at most once a minute). The app sends its whole list with each item's `t`
