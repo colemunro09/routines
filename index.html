@@ -647,6 +647,7 @@ details[open] summary .chev{transform:rotate(180deg)}
   border:1px solid var(--line-soft);border-radius:6px;padding:3px 6px;
 }
 .ask-trace li.bad{color:var(--danger);border-color:var(--danger)}
+.ask-trace li.did{color:var(--accent);border-color:var(--accent-soft);background:var(--accent-soft)}
 .ask-suggest{display:flex;flex-direction:column;gap:6px}
 .ask-suggest .btn{justify-content:flex-start;text-align:left;font-size:14px;color:var(--ink-2);min-height:48px}
 .ask-form{display:flex;gap:8px;align-items:flex-end}
@@ -2511,7 +2512,10 @@ function importPanel(){
    answers with Claude and can read and write Notion. Off until configured, like
    sync. The console key lives only in this device's storage: never in the
    document, never in a setup link. Each question carries a plain-text snapshot
-   of the tracker so Claude can talk about it; nothing comes back into it. */
+   of the tracker so Claude can talk about it. The one thing that comes back into
+   it is a ```routines block (see applyAsk): when the person says what they want
+   changed, the reply carries the change in the import shape and the app applies
+   it, so dictating a meal plan or a shopping list updates the tabs. */
 var ASKCFG="routines.ask", ASKLOG="routines.askLog";
 /* The owner's server. An address is not a secret - every request still needs the key -
    so it is built in and a device only ever asks for the key. */
@@ -2574,7 +2578,123 @@ function askContext(){
     }).filter(Boolean);
     if(parts.length) lines.push("- "+d+(i===weekIdx()?" (today)":"")+": "+parts.join("; "));
   });
-  return lines.join("\n").slice(0,12000);
+  return askRules()+"\n\n"+lines.join("\n").slice(0,12000);
+}
+
+/* How a reply changes the app. The rules ride along with the snapshot, so the
+   server needs nothing new: when the person says what they want (plan Monday's
+   dinner, add eggs, note something from the day), the model answers in prose and
+   also returns one fenced ```routines block in the import shape. The app applies
+   it and shows what changed as chips under the reply. A question gets no block. */
+function askRules(){
+  var opts=MEAL_FIELDS.map(function(f){
+    return f.k+" ("+f.label+"): "+state.meals.options[f.k].map(function(o){ return o.name; }).join(", ");
+  });
+  var stores=dedupe(state.groceries.items.map(firstStore).filter(function(x){ return x!=="Anywhere"; }));
+  var groups=dedupe(state.groceries.items.map(function(it){ return it.group; }).filter(Boolean));
+  return [
+    "You are the assistant inside a personal routines app. When the person asks a question, answer it.",
+    "When the person tells you to change something - a meal plan, a meal prep or grocery schedule, the grocery list, a habit, or a note from their day - "+
+    "confirm briefly in prose AND append exactly one fenced code block tagged routines containing JSON in this shape (include only the keys you change):",
+    "```routines",
+    '{"meals":{"plan":[{"day":"Monday","meal":"Dinner","main":"Salmon","side":"Rice","fruit":"","drink":"Water","note":"","clear":false}],'+
+    '"options":{"main":[{"name":"Salmon","type":"Fish"}]},"slots":["Breakfast","Lunch","Dinner"]},'+
+    '"groceries":[{"name":"Eggs","need":true,"store":"Costco","group":"Dairy","note":"2 dozen"}],'+
+    '"habits":[{"title":"Morning","items":["Stretch"]}],'+
+    '"notes":["Ran into Sam at the gym"]}',
+    "```",
+    "Rules: meal plan entries name a weekday and one of the meal slots; a field left out is kept as it is, \"\" clears it, clear:true clears the whole meal. "+
+    "Prefer meal option names from the lists below; a new name is added as an option. New grocery items default to need:true; "+
+    "\"got it\" or \"don't need\" means need:false. Groceries match by name, so repeating one updates it. "+
+    "notes are appended to the scratch pad with today's date - use them for anything the person wants jotted down. "+
+    "Never put the block in a reply to a plain question, and never invent changes the person did not ask for.",
+    "Meal slots: "+state.meals.slots.join(", ")+".",
+    "Meal options - "+opts.join("; ")+".",
+    "Stores known: "+(stores.join(", ")||"none")+". Food groups known: "+(groups.join(", ")||"none")+".",
+    "Habit sections: "+state.sections.map(function(x){ return x.title||"Untitled"; }).join(", ")+"."
+  ].join("\n");
+}
+/* Split the block off a reply: {text, data}. data is null when there is none or it
+   doesn't parse, and then the reply is shown as it came. */
+function takeAskBlock(reply){
+  var m=/```\s*routines[^\n]*\n([\s\S]*?)```/i.exec(reply);
+  if(!m) return {text:reply,data:null};
+  var data=null;
+  try{ data=JSON.parse(m[1]); }catch(e){}
+  if(!data||typeof data!=="object") return {text:reply,data:null};
+  var text=(reply.slice(0,m.index)+reply.slice(m.index+m[0].length)).replace(/\n{3,}/g,"\n\n").trim();
+  return {text:text,data:data};
+}
+/* Apply a block. Same functions as the import box, with two differences a spoken
+   change needs: meal options merge instead of replacing the list, and a plan entry
+   can clear a meal. Returns one short line per thing changed, for the chips. */
+function applyAsk(data){
+  var did=[];
+  if(data.meals&&typeof data.meals==="object"){
+    var m=data.meals, n=0;
+    if(m.options&&typeof m.options==="object") MEAL_FIELDS.forEach(function(f){
+      var list=m.options[f.k]; if(!Array.isArray(list)) return;
+      var have=state.meals.options[f.k], names={};
+      have.forEach(function(o){ names[o.name.toLowerCase()]=1; });
+      list.forEach(function(o){
+        var name=String(o&&o.name!=null?o.name:o||"").trim();
+        if(!name||names[name.toLowerCase()]) return;
+        have.push({name:name,type:String(o&&o.type||"").trim()}); names[name.toLowerCase()]=1; n++;
+      });
+    });
+    if(Array.isArray(m.plan)) m.plan.forEach(function(e){
+      var i=WEEKDAYS.map(function(d){ return d.toLowerCase(); }).indexOf(String(e.day||"").trim().toLowerCase());
+      var slot=String(e.meal||"").trim(); if(i<0||!slot) return;
+      if(state.meals.slots.indexOf(slot)<0){
+        var hit=null; state.meals.slots.forEach(function(sl){ if(sl.toLowerCase()===slot.toLowerCase()) hit=sl; });
+        if(!hit) return; slot=hit;
+      }
+      var key=mealKey(i,slot);
+      if(e.clear===true){ if(state.meals.plan[key]){ delete state.meals.plan[key]; n++; } return; }
+      var cell=state.meals.plan[key]||(state.meals.plan[key]={});
+      MEAL_FIELDS.forEach(function(f){
+        if(e[f.k]==null) return;
+        var v=String(e[f.k]).trim();
+        if(v){
+          cell[f.k]=v;
+          var names=state.meals.options[f.k].map(function(o){ return o.name.toLowerCase(); });
+          if(names.indexOf(v.toLowerCase())<0) state.meals.options[f.k].push({name:v,type:""});
+        } else delete cell[f.k];
+      });
+      if(e.note!=null){ if(String(e.note).trim()) cell.note=String(e.note).trim(); else delete cell.note; }
+      if(e.done!=null) cell.done=!!e.done;
+      if(!Object.keys(cell).length) delete state.meals.plan[key];
+      n++;
+      did.push(WEEKDAYS[i].slice(0,3)+" "+slot.toLowerCase()+(e.clear?" cleared":" planned"));
+    });
+    if(Array.isArray(m.slots)&&m.slots.length){ state.meals.slots=dedupe(m.slots.map(String)); n++; did.push("Meal slots"); }
+    if(n){ state.meals.mtime=Date.now(); if(!did.length) did.push("Meal options"); }
+  }
+  if(Array.isArray(data.groceries)&&data.groceries.length){
+    var g=importGroceries(data.groceries.map(function(x){
+      if(x&&typeof x==="object"){ if(x.need==null) x.need=true; return x; }
+      return {name:x,need:true};
+    }));
+    if(g.added) did.push(g.added+" grocer"+(g.added===1?"y":"ies")+" added");
+    if(g.updated) did.push(g.updated+" grocer"+(g.updated===1?"y":"ies")+" updated");
+  }
+  if(Array.isArray(data.habits)&&data.habits.length){
+    var h=importHabits(data.habits);
+    if(h) did.push(h+" habit"+(h===1?"":"s")+" added");
+  }
+  var notes=data.notes==null?[]:(Array.isArray(data.notes)?data.notes:[data.notes]);
+  notes=notes.map(function(x){ return String(x||"").trim(); }).filter(Boolean);
+  if(notes.length){
+    var stamp=fmtDay(day,false), cur=state.scratch||"";
+    notes.forEach(function(t){ cur=(cur?cur.replace(/\s+$/,"")+"\n":"")+stamp+" \u00b7 "+t; });
+    state.scratch=cur;
+    did.push(notes.length===1?"Noted":notes.length+" notes added");
+  }
+  if(did.length){
+    save();
+    if(data.groceries) scheduleNotion();
+  }
+  return did;
 }
 
 /* Who answered: the server runs Claude or OpenAI, whichever key it has. */
@@ -2587,19 +2707,22 @@ var TOOL_NAMES={
   notion_search:"Searched Notion", notion_list_rows:"Read a database", notion_read_page:"Read a page",
   notion_create_page:"Added to Notion", notion_append_text:"Wrote in Notion"
 };
-function askTurn(role,text,trace,kind){
+function askTurn(role,text,trace,kind,did){
   var t=document.createElement("div");
   t.className="ask-turn"+(role==="user"?" you":"")+(kind?" "+kind:"");
   var w=document.createElement("div"); w.className="who"; w.textContent=role==="user"?"You":askWho();
   t.appendChild(w);
-  if(trace&&trace.length){
-    var ul=document.createElement("ul"); ul.className="ask-trace"; ul.setAttribute("aria-label","Tools used");
-    trace.forEach(function(c){
+  if((trace&&trace.length)||(did&&did.length)){
+    var ul=document.createElement("ul"); ul.className="ask-trace"; ul.setAttribute("aria-label","What happened");
+    (trace||[]).forEach(function(c){
       var li=document.createElement("li");
       if(!c.ok) li.className="bad";
       li.textContent=(TOOL_NAMES[c.tool]||c.tool.replace(/_/g," "))+(c.ok?"":" \u2014 failed");
       li.title=c.ok?(c.detail||""):(c.error||"");
       ul.appendChild(li);
+    });
+    (did||[]).forEach(function(d){
+      var li=document.createElement("li"); li.className="did"; li.textContent="\u2713 "+d; ul.appendChild(li);
     });
     t.appendChild(ul);
   }
@@ -2873,25 +2996,25 @@ function renderChat(){
   host.appendChild(wrap);
   var hd=mk("div","pane-head"), ht=mk("div");
   ht.appendChild(mk("h2",null,"Ask"));
-  ht.appendChild(mk("div","pane-sub","AI, with your day, meals, groceries and Notion"));
+  ht.appendChild(mk("div","pane-sub","Ask, or say what to change: meals, groceries, notes"));
   hd.appendChild(ht); wrap.appendChild(hd);
   if(!askCfg||askEditing){ askSetup(wrap); return; }
 
 
   if(!askLog.length&&!askBusy&&!askNote){
     var sg=document.createElement("div"); sg.className="ask-suggest";
-    ["What's left on my list today?","How did the last two weeks go?","Which habit do I miss most?"].forEach(function(q){
+    ["What's left on my list today?","Plan this week's dinners from my options","Add eggs, spinach and oats to the grocery list","How did the last two weeks go?"].forEach(function(q){
       sg.appendChild(askButton(q,"ghost",function(){ askSend(q); }));
     });
     wrap.appendChild(sg);
   }
-  askLog.forEach(function(m,i){ wrap.appendChild(askTurn(m.role,m.content,askTraces[i])); });
+  askLog.forEach(function(m,i){ wrap.appendChild(askTurn(m.role,m.content,askTraces[i],null,m.did)); });
   if(askBusy) wrap.appendChild(askTurn("assistant","Thinking… this can take up to a minute.",null,"wait"));
   if(askNote) wrap.appendChild(askTurn("assistant",askNote,askNoteTrace,"err"));
 
   var form=document.createElement("form"); form.className="ask-form";
   var ta=document.createElement("textarea"); ta.rows=1; ta.value=askDraft;
-  ta.placeholder="Ask about your routines or your Notion…";
+  ta.placeholder="Ask, or say what to change\u2026";
   ta.setAttribute("aria-label","Message");
   ta.addEventListener("input",function(){ askDraft=ta.value; });
   ta.addEventListener("keydown",function(e){
@@ -2923,13 +3046,20 @@ function askSend(text){
   fetch(askCfg.url+"/api/chat",{
     method:"POST",
     headers:{"Authorization":"Bearer "+askCfg.key,"Content-Type":"application/json"},
-    body:JSON.stringify({messages:askLog.slice(-39),timeZone:tz,context:askContext()})
+    body:JSON.stringify({
+      messages:askLog.slice(-39).map(function(m){ return {role:m.role,content:m.content}; }),
+      timeZone:tz,context:askContext()
+    })
   }).then(function(res){
     return res.json().catch(function(){ return {}; }).then(function(d){ return {status:res.status,data:d||{}}; });
   }).then(function(r){
     if(r.status===200&&typeof r.data.reply==="string"){
       noteWho(r.data.model);
-      askLog.push({role:"assistant",content:r.data.reply});
+      var got=takeAskBlock(r.data.reply), did=[];
+      if(got.data){ try{ did=applyAsk(got.data); }catch(e){ did=[]; } }
+      var turn={role:"assistant",content:got.text||(did.length?"Done.":r.data.reply)};
+      if(did.length) turn.did=did;
+      askLog.push(turn);
       askTraces[askLog.length-1]=r.data.trace||[];
       saveAskLog();
       return;

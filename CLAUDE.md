@@ -246,7 +246,16 @@ this file.
   with a user turn, or the server rejects it.
 - Each question carries `askContext()`: today's list with ticks, streaks, two weeks of
   scores, the groceries needed by store, and this week's meal plan, computed with the same
-  functions the tabs use. Read-only - nothing the server returns changes the app.
+  functions the tabs use. It opens with `askRules()`, which tells the model how to change
+  the app: when the person says what they want (a meal plan, a shopping list, a note from
+  the day), the reply carries one fenced ```` ```routines ```` block in the import shape plus
+  `notes`. `takeAskBlock()` strips it from the shown reply and `applyAsk()` applies it -
+  the import functions, except that meal options **merge** (a spoken change must never
+  wipe the owner's lists) and a plan entry can `clear` a meal. `notes` append to
+  `scratch` with the day's date. What changed shows as chips on the turn (`did`, kept in
+  `routines.askLog` but stripped from what is sent). A plain question gets no block, and
+  a block that doesn't parse leaves the reply as it came. The server needs nothing new
+  for this; dictation is the keyboard mic.
 - With the console connected, groceries sync with a Notion database **both ways**:
   four seconds after a change, about 3s after the app opens, and on returning to the
   foreground (at most once a minute). The app sends its whole list with each item's `t`
