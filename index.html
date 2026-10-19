@@ -617,7 +617,8 @@ details[open] summary .chev{transform:rotate(180deg)}
 .nsync .pane-sub.err{color:var(--danger)}
 .nsync .btn{padding:8px 12px;min-height:44px;font-size:12.5px}
 /* Ask: questions to the Routines Console server. Same surfaces and type as the list. */
-.ask-view{display:flex;flex-direction:column;gap:10px;padding-top:18px}
+.tell{display:flex;flex-direction:column;gap:8px;margin:14px 0 6px}
+.tell .hint{margin:0 2px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
 .ask-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .ask-bar .eyebrow{
   font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:.1em;
@@ -631,13 +632,10 @@ details[open] summary .chev{transform:rotate(180deg)}
   display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:11px;
   background:var(--surface);border:1px solid var(--line-soft);
 }
-.ask-turn.you{background:var(--accent-soft);border-color:transparent;align-self:flex-end;max-width:85%;border-bottom-right-radius:4px}
-.ask-turn:not(.you){border-bottom-left-radius:4px}
 .ask-turn .who{
   font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink-3);
 }
-.ask-turn.you .who{color:var(--accent)}
 .ask-turn p{margin:0;font-size:14.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
 .ask-turn.err p{color:var(--danger)}
 .ask-turn.wait p{color:var(--ink-3);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px}
@@ -647,8 +645,7 @@ details[open] summary .chev{transform:rotate(180deg)}
   border:1px solid var(--line-soft);border-radius:6px;padding:3px 6px;
 }
 .ask-trace li.bad{color:var(--danger);border-color:var(--danger)}
-.ask-suggest{display:flex;flex-direction:column;gap:6px}
-.ask-suggest .btn{justify-content:flex-start;text-align:left;font-size:14px;color:var(--ink-2);min-height:48px}
+.ask-trace li.did{color:var(--accent);border-color:var(--accent-soft);background:var(--accent-soft)}
 .ask-form{display:flex;gap:8px;align-items:flex-end}
 .ask-form textarea{
   flex:1;min-width:0;min-height:48px;max-height:160px;resize:none;
@@ -687,10 +684,10 @@ details[open] summary .chev{transform:rotate(180deg)}
   <div id="stats" hidden></div>
   <div id="meals" hidden></div>
   <div id="groceries" hidden></div>
-  <div id="chat" hidden></div>
   <div id="quoteHost"></div>
   <div id="sections"></div>
   <div class="dnote" id="dayNote" hidden></div>
+  <div class="tell" id="tellToday" hidden></div>
   <div id="editTools"></div>
   <div class="log" id="log"></div>
   <p class="note" id="note"></p>
@@ -706,7 +703,6 @@ details[open] summary .chev{transform:rotate(180deg)}
     <button class="tab" type="button" data-tab="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 10"/></svg><span>Today</span></button>
     <button class="tab" type="button" data-tab="meals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a2 2 0 0 0 4 0V3M7 10v11M17 21V3c-2 0-3.5 2.5-3.5 6s1.5 4 3.5 4"/></svg><span>Meals</span></button>
     <button class="tab" type="button" data-tab="groceries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg><span>Groceries</span></button>
-    <button class="tab" type="button" data-tab="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12Z"/></svg><span>Ask</span></button>
   </div>
 </nav>
 
@@ -2142,6 +2138,7 @@ function renderMeals(){
   head.appendChild(t); pane.appendChild(head);
   var meter=mk("div","lmeter"), fill=mk("i"); fill.style.width=(c.total?c.done/c.total*100:0)+"%";
   meter.appendChild(fill); pane.appendChild(meter);
+  var tellM=mk("div","tell"); tellBox(tellM,"Tell it","Say the plan for a day\u2026"); pane.appendChild(tellM);
   if(mealOptsOpen) pane.appendChild(mealOptionsPanel());
 
   var ti=weekIdx(), strip=mk("div","days");
@@ -2295,6 +2292,7 @@ function renderGroceries(){
     ns.appendChild(sb);
     pane.appendChild(ns);
   }
+  var tellG=mk("div","tell"); tellBox(tellG,"Tell it","Say what to add\u2026"); pane.appendChild(tellG);
   pane.appendChild(datalist("dl_groups",items.map(function(it){ return it.group; })));
   pane.appendChild(datalist("dl_stores",allStores()));
 
@@ -2506,13 +2504,19 @@ function importPanel(){
   return det;
 }
 
-/* ---------- ask ----------
-   Questions go to the Routines Console server (its own repo, on Vercel), which
-   answers with Claude and can read and write Notion. Off until configured, like
-   sync. The console key lives only in this device's storage: never in the
-   document, never in a setup link. Each question carries a plain-text snapshot
-   of the tracker so Claude can talk about it; nothing comes back into it. */
-var ASKCFG="routines.ask", ASKLOG="routines.askLog";
+/* ---------- tell it ----------
+   One line on Today, Meals and Groceries where the person says what they want -
+   "Monday dinner salmon and rice", "add eggs and spinach", "note I ran into Sam" -
+   or asks a question. It goes to the Routines Console server (its own repo), which
+   answers with Claude and can read and write Notion. Off until connected, like
+   sync; the key lives only in this device's storage, never in the document or a
+   setup link. Each message carries a plain-text snapshot of the tracker. What
+   comes back into the app is a ```routines block (see applyAsk): the reply
+   carries the change in the import shape and the app applies it in place. There
+   is no chat tab: the last reply shows under the box until the next one, and the
+   last few turns stay in memory so a follow-up ("make that Tuesday") still works. */
+var ASKCFG="routines.ask";
+lsDel("routines.askLog"); /* older builds kept a chat here */
 /* The owner's server. An address is not a secret - every request still needs the key -
    so it is built in and a device only ever asks for the key. */
 var HOME_SERVER="https://server-production-5580.up.railway.app";
@@ -2524,20 +2528,9 @@ if(!askCfg||!askCfg.url||!askCfg.key) askCfg=null;
 function serverCfg(){ return askCfg? {via:"server",url:askCfg.url,key:askCfg.key,mint:true} : null; }
 function directCfg(){ try{ return JSON.parse(lsGet(CFGKEY)||"null"); }catch(e){ return null; } }
 /* history must alternate user/assistant from a user turn, or the server rejects it */
-var askLog=(function(a){
-  if(!Array.isArray(a)) return [];
-  for(var i=0;i<a.length;i++){
-    if(!a[i]||typeof a[i].content!=="string"||a[i].role!==(i%2?"assistant":"user")) return [];
-  }
-  return a;
-})(readJSON(ASKLOG));
-var askBusy=false, askDraft="", askNote="", askNoteTrace=null, askEditing=!askCfg, askTraces={};
-
-function saveAskLog(){
-  var a=askLog.slice(-40);
-  if(a.length&&a[0].role!=="user") a=a.slice(1);
-  lsSet(ASKLOG,JSON.stringify(a));
-}
+var askLog=[], askBusy=false, askDraft="", askEditing=!askCfg;
+/* the last reply, shown under the box: {text, did, trace, kind} */
+var askLast=null;
 
 /* What Claude sees of the tracker: today's list with ticks, streaks, two weeks of
    scores. Scored with the same functions as the stats view, so the numbers agree. */
@@ -2574,7 +2567,123 @@ function askContext(){
     }).filter(Boolean);
     if(parts.length) lines.push("- "+d+(i===weekIdx()?" (today)":"")+": "+parts.join("; "));
   });
-  return lines.join("\n").slice(0,12000);
+  return askRules()+"\n\n"+lines.join("\n").slice(0,12000);
+}
+
+/* How a reply changes the app. The rules ride along with the snapshot, so the
+   server needs nothing new: when the person says what they want (plan Monday's
+   dinner, add eggs, note something from the day), the model answers in prose and
+   also returns one fenced ```routines block in the import shape. The app applies
+   it and shows what changed as chips under the reply. A question gets no block. */
+function askRules(){
+  var opts=MEAL_FIELDS.map(function(f){
+    return f.k+" ("+f.label+"): "+state.meals.options[f.k].map(function(o){ return o.name; }).join(", ");
+  });
+  var stores=dedupe(state.groceries.items.map(firstStore).filter(function(x){ return x!=="Anywhere"; }));
+  var groups=dedupe(state.groceries.items.map(function(it){ return it.group; }).filter(Boolean));
+  return [
+    "You are the assistant inside a personal routines app. When the person asks a question, answer it.",
+    "When the person tells you to change something - a meal plan, a meal prep or grocery schedule, the grocery list, a habit, or a note from their day - "+
+    "confirm briefly in prose AND append exactly one fenced code block tagged routines containing JSON in this shape (include only the keys you change):",
+    "```routines",
+    '{"meals":{"plan":[{"day":"Monday","meal":"Dinner","main":"Salmon","side":"Rice","fruit":"","drink":"Water","note":"","clear":false}],'+
+    '"options":{"main":[{"name":"Salmon","type":"Fish"}]},"slots":["Breakfast","Lunch","Dinner"]},'+
+    '"groceries":[{"name":"Eggs","need":true,"store":"Costco","group":"Dairy","note":"2 dozen"}],'+
+    '"habits":[{"title":"Morning","items":["Stretch"]}],'+
+    '"notes":["Ran into Sam at the gym"]}',
+    "```",
+    "Rules: meal plan entries name a weekday and one of the meal slots; a field left out is kept as it is, \"\" clears it, clear:true clears the whole meal. "+
+    "Prefer meal option names from the lists below; a new name is added as an option. New grocery items default to need:true; "+
+    "\"got it\" or \"don't need\" means need:false. Groceries match by name, so repeating one updates it. "+
+    "notes are appended to the scratch pad with today's date - use them for anything the person wants jotted down. "+
+    "Never put the block in a reply to a plain question, and never invent changes the person did not ask for.",
+    "Meal slots: "+state.meals.slots.join(", ")+".",
+    "Meal options - "+opts.join("; ")+".",
+    "Stores known: "+(stores.join(", ")||"none")+". Food groups known: "+(groups.join(", ")||"none")+".",
+    "Habit sections: "+state.sections.map(function(x){ return x.title||"Untitled"; }).join(", ")+"."
+  ].join("\n");
+}
+/* Split the block off a reply: {text, data}. data is null when there is none or it
+   doesn't parse, and then the reply is shown as it came. */
+function takeAskBlock(reply){
+  var m=/```\s*routines[^\n]*\n([\s\S]*?)```/i.exec(reply);
+  if(!m) return {text:reply,data:null};
+  var data=null;
+  try{ data=JSON.parse(m[1]); }catch(e){}
+  if(!data||typeof data!=="object") return {text:reply,data:null};
+  var text=(reply.slice(0,m.index)+reply.slice(m.index+m[0].length)).replace(/\n{3,}/g,"\n\n").trim();
+  return {text:text,data:data};
+}
+/* Apply a block. Same functions as the import box, with two differences a spoken
+   change needs: meal options merge instead of replacing the list, and a plan entry
+   can clear a meal. Returns one short line per thing changed, for the chips. */
+function applyAsk(data){
+  var did=[];
+  if(data.meals&&typeof data.meals==="object"){
+    var m=data.meals, n=0;
+    if(m.options&&typeof m.options==="object") MEAL_FIELDS.forEach(function(f){
+      var list=m.options[f.k]; if(!Array.isArray(list)) return;
+      var have=state.meals.options[f.k], names={};
+      have.forEach(function(o){ names[o.name.toLowerCase()]=1; });
+      list.forEach(function(o){
+        var name=String(o&&o.name!=null?o.name:o||"").trim();
+        if(!name||names[name.toLowerCase()]) return;
+        have.push({name:name,type:String(o&&o.type||"").trim()}); names[name.toLowerCase()]=1; n++;
+      });
+    });
+    if(Array.isArray(m.plan)) m.plan.forEach(function(e){
+      var i=WEEKDAYS.map(function(d){ return d.toLowerCase(); }).indexOf(String(e.day||"").trim().toLowerCase());
+      var slot=String(e.meal||"").trim(); if(i<0||!slot) return;
+      if(state.meals.slots.indexOf(slot)<0){
+        var hit=null; state.meals.slots.forEach(function(sl){ if(sl.toLowerCase()===slot.toLowerCase()) hit=sl; });
+        if(!hit) return; slot=hit;
+      }
+      var key=mealKey(i,slot);
+      if(e.clear===true){ if(state.meals.plan[key]){ delete state.meals.plan[key]; n++; } return; }
+      var cell=state.meals.plan[key]||(state.meals.plan[key]={});
+      MEAL_FIELDS.forEach(function(f){
+        if(e[f.k]==null) return;
+        var v=String(e[f.k]).trim();
+        if(v){
+          cell[f.k]=v;
+          var names=state.meals.options[f.k].map(function(o){ return o.name.toLowerCase(); });
+          if(names.indexOf(v.toLowerCase())<0) state.meals.options[f.k].push({name:v,type:""});
+        } else delete cell[f.k];
+      });
+      if(e.note!=null){ if(String(e.note).trim()) cell.note=String(e.note).trim(); else delete cell.note; }
+      if(e.done!=null) cell.done=!!e.done;
+      if(!Object.keys(cell).length) delete state.meals.plan[key];
+      n++;
+      did.push(WEEKDAYS[i].slice(0,3)+" "+slot.toLowerCase()+(e.clear?" cleared":" planned"));
+    });
+    if(Array.isArray(m.slots)&&m.slots.length){ state.meals.slots=dedupe(m.slots.map(String)); n++; did.push("Meal slots"); }
+    if(n){ state.meals.mtime=Date.now(); if(!did.length) did.push("Meal options"); }
+  }
+  if(Array.isArray(data.groceries)&&data.groceries.length){
+    var g=importGroceries(data.groceries.map(function(x){
+      if(x&&typeof x==="object"){ if(x.need==null) x.need=true; return x; }
+      return {name:x,need:true};
+    }));
+    if(g.added) did.push(g.added+" grocer"+(g.added===1?"y":"ies")+" added");
+    if(g.updated) did.push(g.updated+" grocer"+(g.updated===1?"y":"ies")+" updated");
+  }
+  if(Array.isArray(data.habits)&&data.habits.length){
+    var h=importHabits(data.habits);
+    if(h) did.push(h+" habit"+(h===1?"":"s")+" added");
+  }
+  var notes=data.notes==null?[]:(Array.isArray(data.notes)?data.notes:[data.notes]);
+  notes=notes.map(function(x){ return String(x||"").trim(); }).filter(Boolean);
+  if(notes.length){
+    var stamp=fmtDay(day,false), cur=state.scratch||"";
+    notes.forEach(function(t){ cur=(cur?cur.replace(/\s+$/,"")+"\n":"")+stamp+" \u00b7 "+t; });
+    state.scratch=cur;
+    did.push(notes.length===1?"Noted":notes.length+" notes added");
+  }
+  if(did.length){
+    save();
+    if(data.groceries) scheduleNotion();
+  }
+  return did;
 }
 
 /* Who answered: the server runs Claude or OpenAI, whichever key it has. */
@@ -2587,19 +2696,22 @@ var TOOL_NAMES={
   notion_search:"Searched Notion", notion_list_rows:"Read a database", notion_read_page:"Read a page",
   notion_create_page:"Added to Notion", notion_append_text:"Wrote in Notion"
 };
-function askTurn(role,text,trace,kind){
+function askTurn(text,trace,kind,did){
   var t=document.createElement("div");
-  t.className="ask-turn"+(role==="user"?" you":"")+(kind?" "+kind:"");
-  var w=document.createElement("div"); w.className="who"; w.textContent=role==="user"?"You":askWho();
+  t.className="ask-turn"+(kind?" "+kind:"");
+  var w=document.createElement("div"); w.className="who"; w.textContent=askWho();
   t.appendChild(w);
-  if(trace&&trace.length){
-    var ul=document.createElement("ul"); ul.className="ask-trace"; ul.setAttribute("aria-label","Tools used");
-    trace.forEach(function(c){
+  if((trace&&trace.length)||(did&&did.length)){
+    var ul=document.createElement("ul"); ul.className="ask-trace"; ul.setAttribute("aria-label","What happened");
+    (trace||[]).forEach(function(c){
       var li=document.createElement("li");
       if(!c.ok) li.className="bad";
       li.textContent=(TOOL_NAMES[c.tool]||c.tool.replace(/_/g," "))+(c.ok?"":" \u2014 failed");
       li.title=c.ok?(c.detail||""):(c.error||"");
       ul.appendChild(li);
+    });
+    (did||[]).forEach(function(d){
+      var li=document.createElement("li"); li.className="did"; li.textContent="\u2713 "+d; ul.appendChild(li);
     });
     t.appendChild(ul);
   }
@@ -2739,7 +2851,7 @@ function askSetup(host){
   var box=document.createElement("div"); box.className="ask-setup";
   var pad=document.createElement("div"); pad.className="dpad";
   var intro=document.createElement("p");
-  intro.textContent="Enter your server key once and this device remembers it. That syncs your list with your other devices, turns on Ask, and keeps groceries in step with Notion.";
+  intro.textContent="Enter your server key once and this device remembers it. That syncs your list with your other devices, lets you tell each tab what to change, and keeps groceries in step with Notion.";
   pad.appendChild(intro);
   var fUrl=field("Server address", askCfg?askCfg.url:(lsGet(ASKPEND)||HOME_SERVER), "https://your-server.up.railway.app");
   var fKey=field("Server key", "", askCfg?"Saved. Paste a new one to replace it.":"The key you set as CONSOLE_SECRET");
@@ -2793,7 +2905,7 @@ function askSetup(host){
     bio.className+=" wide";
   }
   if(askCfg){
-    acts.appendChild(askButton("Cancel","ghost",function(){ askEditing=false; renderChat(); }));
+    acts.appendChild(askButton("Cancel","ghost",function(){ askEditing=false; render(); }));
     acts.appendChild(askButton("Disconnect","danger",function(){
       if(!confirm("Disconnect this device from your Routines server? Its list stays here, but stops syncing until you connect again.")) return;
       askCfg=null; lsDel(ASKCFG); askEditing=true; cfg=directCfg();
@@ -2846,13 +2958,13 @@ function passkeyRow(){
 function serverPanel(){
   var det=document.createElement("details"); det.id="serverPanel";
   det.appendChild(summaryRow("cloud","Routines server",askCfg?{tone:statusTone(),text:sync.msg}:{tone:"",text:lsGet(ASKPEND)?"Connect":"Not connected"}));
-  if(!askCfg){
-    if(lsGet(ASKPEND)) det.open=true;
+  if(!askCfg||askEditing){
+    if(lsGet(ASKPEND)||askEditing) det.open=true;
     var wrapS=mk("div"); askSetup(wrapS); det.appendChild(wrapS);
     return det;
   }
   var pad=mk("div","dpad");
-  pad.appendChild(mk("p",null,"Connected to "+askCfg.url.replace(/^https:\/\//,"")+". Your list syncs through it, Ask uses it, and groceries stay in step with Notion."));
+  pad.appendChild(mk("p",null,"Connected to "+askCfg.url.replace(/^https:\/\//,"")+". Your list syncs through it, the tell-it box on each tab uses it, and groceries stay in step with Notion."));
   var link=setupLink();
   pad.appendChild(mk("p","hint","To add another device, open this link there and type your server key once. The link never contains the key."));
   var ta=document.createElement("textarea"); ta.readOnly=true; ta.value=link; ta.setAttribute("aria-label","Setup link"); ta.rows=2;
@@ -2860,91 +2972,71 @@ function serverPanel(){
   var row=mk("div","row2");
   var cb=mkBtn("Copy setup link","primary",function(){ copy(ta,cb,"Copy setup link"); });
   row.appendChild(cb);
-  row.appendChild(mkBtn("Change server","ghost",function(){ askEditing=true; view="chat"; endEdit(); render(); window.scrollTo(0,0); }));
+  row.appendChild(mkBtn("Change server","ghost",function(){ askEditing=true; render(); }));
   pad.appendChild(row);
   if(canPasskey()) pad.appendChild(passkeyRow());
   det.appendChild(pad);
   return det;
 }
 
-function renderChat(){
-  var host=$("chat"); host.innerHTML="";
-  var wrap=document.createElement("div"); wrap.className="ask-view";
-  host.appendChild(wrap);
-  var hd=mk("div","pane-head"), ht=mk("div");
-  ht.appendChild(mk("h2",null,"Ask"));
-  ht.appendChild(mk("div","pane-sub","AI, with your day, meals, groceries and Notion"));
-  hd.appendChild(ht); wrap.appendChild(hd);
-  if(!askCfg||askEditing){ askSetup(wrap); return; }
-
-
-  if(!askLog.length&&!askBusy&&!askNote){
-    var sg=document.createElement("div"); sg.className="ask-suggest";
-    ["What's left on my list today?","How did the last two weeks go?","Which habit do I miss most?"].forEach(function(q){
-      sg.appendChild(askButton(q,"ghost",function(){ askSend(q); }));
-    });
-    wrap.appendChild(sg);
-  }
-  askLog.forEach(function(m,i){ wrap.appendChild(askTurn(m.role,m.content,askTraces[i])); });
-  if(askBusy) wrap.appendChild(askTurn("assistant","Thinking… this can take up to a minute.",null,"wait"));
-  if(askNote) wrap.appendChild(askTurn("assistant",askNote,askNoteTrace,"err"));
-
+/* The box itself. Built fresh on each render; the draft and the last reply live
+   in variables so switching tabs or a sync re-render loses nothing. */
+function tellBox(host,hint,placeholder){
+  host.innerHTML="";
+  if(!askCfg||editing) return;
+  host.appendChild(mk("div","hint",hint));
   var form=document.createElement("form"); form.className="ask-form";
   var ta=document.createElement("textarea"); ta.rows=1; ta.value=askDraft;
-  ta.placeholder="Ask about your routines or your Notion…";
-  ta.setAttribute("aria-label","Message");
+  ta.placeholder=placeholder; ta.setAttribute("aria-label",hint);
   ta.addEventListener("input",function(){ askDraft=ta.value; });
   ta.addEventListener("keydown",function(e){
-    if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); askSend(ta.value); }
+    if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); tellSend(ta.value); }
   });
   var send=document.createElement("button"); send.type="submit"; send.className="btn primary";
   send.textContent="Send"; send.disabled=askBusy;
-  form.addEventListener("submit",function(e){ e.preventDefault(); askSend(ta.value); });
-  form.appendChild(ta); form.appendChild(send); wrap.appendChild(form);
-
-  var foot=mk("div","pane-foot");
-  if(askLog.length){
-    var nc=mk("button","linkbtn","New chat"); nc.type="button";
-    nc.addEventListener("click",function(){ if(askBusy) return; askLog=[]; askTraces={}; askNote=""; lsDel(ASKLOG); renderChat(); });
-    foot.appendChild(nc);
+  form.addEventListener("submit",function(e){ e.preventDefault(); tellSend(ta.value); });
+  form.appendChild(ta); form.appendChild(send); host.appendChild(form);
+  if(askBusy) host.appendChild(askTurn("Thinking\u2026 this can take up to a minute.",null,"wait"));
+  else if(askLast){
+    var card=askTurn(askLast.text,askLast.trace,askLast.kind,askLast.did);
+    var x=mk("button","linkbtn","Clear"); x.type="button";
+    x.addEventListener("click",function(){ askLast=null; render(); });
+    card.appendChild(x); host.appendChild(card);
   }
-  var st=mk("button","linkbtn","Server settings"); st.type="button";
-  st.addEventListener("click",function(){ askEditing=true; renderChat(); });
-  foot.appendChild(st); wrap.appendChild(foot);
 }
 
-function askSend(text){
+function tellSend(text){
   text=String(text||"").trim();
   if(!text||askBusy||!askCfg) return;
   askLog.push({role:"user",content:text});
-  askDraft=""; askNote=""; askNoteTrace=null; askBusy=true;
-  renderChat(); window.scrollTo(0,document.body.scrollHeight);
+  askDraft=""; askLast=null; askBusy=true;
+  render();
   var tz=""; try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone||""; }catch(e){}
   fetch(askCfg.url+"/api/chat",{
     method:"POST",
     headers:{"Authorization":"Bearer "+askCfg.key,"Content-Type":"application/json"},
-    body:JSON.stringify({messages:askLog.slice(-39),timeZone:tz,context:askContext()})
+    body:JSON.stringify({messages:askLog.slice(-11),timeZone:tz,context:askContext()})
   }).then(function(res){
     return res.json().catch(function(){ return {}; }).then(function(d){ return {status:res.status,data:d||{}}; });
   }).then(function(r){
     if(r.status===200&&typeof r.data.reply==="string"){
       noteWho(r.data.model);
-      askLog.push({role:"assistant",content:r.data.reply});
-      askTraces[askLog.length-1]=r.data.trace||[];
-      saveAskLog();
+      var got=takeAskBlock(r.data.reply), did=[];
+      if(got.data){ try{ did=applyAsk(got.data); }catch(e){ did=[]; } }
+      var reply=got.text||(did.length?"Done.":r.data.reply);
+      askLog.push({role:"assistant",content:reply});
+      if(askLog.length>12) askLog.splice(0,askLog.length-12);
+      askLast={text:reply,did:did,trace:r.data.trace||[],kind:""};
       return;
     }
-    askLog.pop(); askDraft=text; askNoteTrace=r.data.trace||null;
-    askNote = r.status===401
-      ? "Your server key was rejected. Open Server settings and paste it again."
-      : (r.data.error||("Your server answered "+r.status+"."));
+    askLog.pop(); askDraft=text;
+    askLast={text: r.status===401
+      ? "Your server key was rejected. Open Edit list \u2192 Routines server and paste it again."
+      : (r.data.error||("Your server answered "+r.status+".")), trace:r.data.trace||null, kind:"err"};
   },function(){
     askLog.pop(); askDraft=text;
-    askNote="Couldn't reach your Routines server. Check your connection and send again.";
-  }).then(function(){
-    askBusy=false;
-    if(view==="chat"){ renderChat(); window.scrollTo(0,document.body.scrollHeight); }
-  });
+    askLast={text:"Couldn't reach your Routines server. Check your connection and send again.",kind:"err"};
+  }).then(function(){ askBusy=false; render(); });
 }
 
 /* ---------- groceries ⇄ Notion ----------
@@ -3035,7 +3127,7 @@ function paintNotion(){
 function render(){
   if(drag) stopDrag(false);
   var onStats = view==="stats", onList = view==="list";
-  ["meter","quoteHost","sections","dayNote","editTools","log","note","fab"].forEach(function(id){
+  ["meter","quoteHost","sections","dayNote","tellToday","editTools","log","note","fab"].forEach(function(id){
     $(id).hidden = !onList;
   });
   $("wordmark").hidden = onStats;
@@ -3043,7 +3135,6 @@ function render(){
   $("stats").hidden = !onStats;
   $("meals").hidden = view!=="meals";
   $("groceries").hidden = view!=="groceries";
-  $("chat").hidden = view!=="chat";
   $("tabs").hidden = onStats;
   Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){
     var on=b.getAttribute("data-tab")===view;
@@ -3054,8 +3145,9 @@ function render(){
   if(onStats){ renderStats(); return; }
   if(view==="meals"){ renderMeals(); return; }
   if(view==="groceries"){ renderGroceries(); paintNotion(); return; }
-  if(view==="chat"){ renderChat(); return; }
-  renderQuote(); renderSections(); renderDayNote(); renderEditTools(); renderLog(); renderNote();
+  renderQuote(); renderSections(); renderDayNote();
+  tellBox($("tellToday"),"Tell it","Note something, or ask\u2026");
+  renderEditTools(); renderLog(); renderNote();
   $("fabLabel").textContent = editing? "Done" : "Edit list";
   $("fab").classList.toggle("on", editing);
   $("fab").querySelector("svg").innerHTML = editing
@@ -3134,9 +3226,8 @@ $("stats").addEventListener("click",chartClick);
 
 $("chip").addEventListener("click",function(){
   if(cfg&&sync.state!=="busy"){ pull(); return; }
-  if(!cfg&&lsGet(ASKPEND)){ view="chat"; render(); window.scrollTo(0,0); return; }
   editing=true; render();
-  var p=document.getElementById("syncPanel");
+  var p=document.getElementById(!cfg&&lsGet(ASKPEND)?"serverPanel":"syncPanel");
   if(p){ p.open=true; p.scrollIntoView({behavior:"smooth",block:"center"}); }
 });
 
