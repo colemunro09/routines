@@ -204,18 +204,21 @@ current lists across.
 Pull happens on load, on focus, and on visibility change. Push is debounced ~1.2s after a
 change.
 
-## Import
+## Loading the owner's lists
 
-One paste box, in Today's edit tools and at the foot of Groceries, takes three shapes:
-a grocery sheet copied from Sheets or Excel (tab-separated, header row with `Item` and
-any of `Need`, `Food group`, `Store`, `Quantity`/`Note`), the same as CSV, or JSON with any
-of `habits`, `groceries` and `meals` (options, slots, and a plan of
-`{day, meal, main|side|fruit|drink, note}` entries). Matching rows update by name, new ones
-are added, nothing is deleted, so running the same import twice is harmless. Habits
-dedupe by label across every section and land in a section matched by title.
+There is no paste box - the owner asked for it to go. Two ways in, both landing on the
+same functions (`importGroceries`, `importHabits`, and the meals handling in `applyAsk`):
+matching rows update by name, new ones are added, nothing is deleted.
 
-The owner's real lists come in through this box from a file kept outside the repo. Like
-the habits in `DEFAULT`, `MEAL_SEED` stays generic.
+- **The Tell it block** - see the next section.
+- **A one-time link.** `#i=` carries base64 JSON in the Tell it block shape
+  (`groceries`, `meals` with `slots`/`options`/`plan`, `habits`, `notes`). `loadLink()`
+  applies it once on load, drops the hash so a reload can't apply it twice, and says what
+  landed. With a link the meal `options` **replace** the starter set (`applyAsk(data,true)`),
+  because the link carries the owner's whole list; a spoken change only ever adds. Claude
+  builds the link from the owner's two Google Sheets ("Grocery List" and "Meal
+  Preperation" in Drive) and hands it over in chat - the data is never in the repo. Like
+  the habits in `DEFAULT`, `MEAL_SEED` stays generic.
 
 ## Tell it and the Notion copy
 

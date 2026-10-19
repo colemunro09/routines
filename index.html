@@ -1733,8 +1733,6 @@ function renderEditTools(){
   /* the whole document as text. it is a wall of JSON, so it lives behind its own
      disclosure - the snapshots above are the everyday undo; this is the escape
      hatch that survives losing the device. */
-  box.appendChild(importPanel());
-
   var textDet=document.createElement("details");
   textDet.appendChild(summaryRow("disk","Keep a text copy",null));
   var tpad=document.createElement("div"); tpad.className="dpad";
@@ -2347,7 +2345,7 @@ function renderGroceries(){
     var shown=q? items.filter(function(it){ return it.name.toLowerCase().indexOf(q)>=0; }) : items;
     if(!items.length){
       var e2=mk("div","sec"), ep2=mk("div","lempty");
-      ep2.appendChild(mk("p",null,"Keep everything you buy here, then tap what you need. Type an item above, or paste a whole sheet with Import below."));
+      ep2.appendChild(mk("p",null,"Keep everything you buy here, then tap what you need. Type an item above, or tell it what to add."));
       e2.appendChild(ep2); pane.appendChild(e2);
     } else if(!shown.length){
       var e3=mk("div","sec"), ep3=mk("div","lempty");
@@ -2358,7 +2356,6 @@ function renderGroceries(){
       var n=g.items.filter(function(it){ return it.need; }).length;
       pane.appendChild(groCard(g.name,n?n+" needed":"",g.items,"list"));
     });
-    pane.appendChild(importPanel());
   }
   host.appendChild(pane);
 }
@@ -2373,22 +2370,6 @@ function findGrocery(name){
    arrives as tab-separated rows; a CSV export as comma-separated; an import
    prepared by Claude as JSON with any of habits, groceries and meals. Nothing is
    ever deleted: matching rows update, new ones are added. */
-function parseTable(text){
-  var sep=text.indexOf("\t")>=0?"\t":",", rows=[], row=[], cell="", q=false;
-  for(var i=0;i<text.length;i++){
-    var ch=text[i];
-    if(q){
-      if(ch==='"'){ if(text[i+1]==='"'){ cell+='"'; i++; } else q=false; }
-      else cell+=ch;
-    }
-    else if(ch==='"'&&cell==="") q=true;
-    else if(ch===sep){ row.push(cell); cell=""; }
-    else if(ch==="\n"){ row.push(cell); rows.push(row); row=[]; cell=""; }
-    else if(ch!=="\r") cell+=ch;
-  }
-  row.push(cell); rows.push(row);
-  return rows.filter(function(r){ return r.some(function(c){ return c.trim(); }); });
-}
 function truthy(v){ return /^(true|yes|y|1|x|✓|✔)$/i.test(String(v).trim()); }
 function importGroceries(list){
   var added=0, updated=0;
@@ -2406,27 +2387,6 @@ function importGroceries(list){
   if(added||updated){ state.groceries.mtime=Date.now(); groEpoch++; }
   return {added:added,updated:updated};
 }
-function groceriesFromTable(rows){
-  var h=-1;
-  for(var i=0;i<rows.length&&h<0;i++){
-    if(rows[i].some(function(c){ return /^\s*(item|name)\s*$/i.test(c); })) h=i;
-  }
-  if(h<0) throw new Error("Couldn't find a header row with an Item column. Copy the sheet including its header row.");
-  var cols={};
-  rows[h].forEach(function(c,i){
-    var k=c.trim().toLowerCase();
-    if(/^(item|name)$/.test(k)) cols.name=i;
-    else if(/^need/.test(k)) cols.need=i;
-    else if(/group|category|aisle/.test(k)) cols.group=i;
-    else if(/store|shop/.test(k)) cols.store=i;
-    else if(/qty|quantity|note/.test(k)) cols.note=i;
-  });
-  return rows.slice(h+1).map(function(r){
-    var g={name:r[cols.name]};
-    ["need","group","store","note"].forEach(function(k){ if(cols[k]!=null) g[k]=r[cols[k]]||""; });
-    return g;
-  });
-}
 function importHabits(sections){
   var added=0, have={};
   state.sections.forEach(function(sec){ sec.items.forEach(function(it){ have[it.label.trim().toLowerCase()]=1; }); });
@@ -2443,67 +2403,6 @@ function importHabits(sections){
   if(added) touchToday();
   return added;
 }
-function importMeals(src){
-  var n=0;
-  if(src.options) MEAL_FIELDS.forEach(function(f){
-    var list=src.options[f.k]; if(!Array.isArray(list)) return;
-    state.meals.options[f.k]=parseOptionLines(list.map(function(o){
-      return Array.isArray(o)? o.join(", ") : (o.type? o.name+", "+o.type : String(o.name||o));
-    }).join("\n"));
-    n++;
-  });
-  if(Array.isArray(src.slots)&&src.slots.length){ state.meals.slots=dedupe(src.slots.map(String)); n++; }
-  /* plan entries look like {day:"Monday", meal:"Breakfast", drink:"Milk"} */
-  if(Array.isArray(src.plan)) src.plan.forEach(function(e){
-    var i=WEEKDAYS.map(function(d){ return d.toLowerCase(); }).indexOf(String(e.day||"").trim().toLowerCase());
-    var slot=String(e.meal||"").trim(); if(i<0||!slot) return;
-    var key=mealKey(i,slot), cell=state.meals.plan[key]||(state.meals.plan[key]={});
-    MEAL_FIELDS.forEach(function(f){ if(e[f.k]) cell[f.k]=String(e[f.k]); });
-    if(e.note) cell.note=String(e.note);
-    if(!Object.keys(cell).length) delete state.meals.plan[key]; else n++;
-  });
-  if(n) state.meals.mtime=Date.now();
-  return n;
-}
-function runImport(text){
-  text=String(text||"").trim();
-  if(!text) throw new Error("Paste something first.");
-  var said=[];
-  if(text[0]==="{"){
-    var data;
-    try{ data=JSON.parse(text); }catch(e){ throw new Error("That looks like JSON but doesn't parse. Check you copied all of it."); }
-    if(Array.isArray(data.habits)){ var h=importHabits(data.habits); said.push(h+" habit"+(h===1?"":"s")+" added"); }
-    if(Array.isArray(data.groceries)){ var g=importGroceries(data.groceries); said.push(g.added+" grocery items added, "+g.updated+" updated"); }
-    if(data.meals){ var m=importMeals(data.meals); said.push(m?"meal options updated":"no meal options found"); }
-    if(!said.length) throw new Error("Nothing to import. Expected habits, groceries or meals.");
-  } else {
-    var r=importGroceries(groceriesFromTable(parseTable(text)));
-    if(!r.added&&!r.updated) throw new Error("No grocery rows found under the header.");
-    said.push(r.added+" grocery items added, "+r.updated+" updated");
-  }
-  save();
-  if(/grocery/.test(said.join(" "))) scheduleNotion();
-  return said.join("; ")+".";
-}
-function importPanel(){
-  var det=document.createElement("details");
-  det.appendChild(summaryRow("plus","Import habits, meals or groceries",null));
-  var pad=mk("div","dpad");
-  pad.appendChild(mk("p",null,"Paste a grocery sheet copied from Google Sheets or Excel, header row included (Item, Need, Food group, Store), or an import Claude prepared for you. Matching items update and new ones are added. Nothing is deleted."));
-  var ta=document.createElement("textarea"); ta.setAttribute("aria-label","Text to import"); ta.id="importText";
-  var msg=mk("p","hint"); msg.hidden=true;
-  var go=mkBtn("Import","primary",function(){
-    try{
-      var said=runImport(ta.value);
-      ta.value=""; render();
-      alert("Imported: "+said);
-    }catch(e){ msg.textContent=e.message; msg.hidden=false; }
-  });
-  pad.appendChild(ta); pad.appendChild(msg); pad.appendChild(go);
-  det.appendChild(pad);
-  return det;
-}
-
 /* ---------- tell it ----------
    One line on Today, Meals and Groceries where the person says what they want -
    "Monday dinner salmon and rice", "add eggs and spinach", "note I ran into Sam" -
@@ -2617,12 +2516,15 @@ function takeAskBlock(reply){
 /* Apply a block. Same functions as the import box, with two differences a spoken
    change needs: meal options merge instead of replacing the list, and a plan entry
    can clear a meal. Returns one short line per thing changed, for the chips. */
-function applyAsk(data){
+function applyAsk(data,whole){
   var did=[];
   if(data.meals&&typeof data.meals==="object"){
     var m=data.meals, n=0;
     if(m.options&&typeof m.options==="object") MEAL_FIELDS.forEach(function(f){
       var list=m.options[f.k]; if(!Array.isArray(list)) return;
+      /* a link carries the owner's whole option list, so it replaces the starter
+         set; a spoken change only ever adds */
+      if(whole){ state.meals.options[f.k]=[]; n++; }
       var have=state.meals.options[f.k], names={};
       have.forEach(function(o){ names[o.name.toLowerCase()]=1; });
       list.forEach(function(o){
@@ -3249,6 +3151,23 @@ window.addEventListener("resize",function(){
 });
 
 markClean();
+/* A one-time link: #i= carries base64 JSON in the Tell it block shape. Claude
+   builds it from the owner's sheets so the lists arrive without a paste box.
+   Applied once, then the hash is dropped so a reload can't apply it again. */
+(function loadLink(){
+  var m=/[#&]i=([A-Za-z0-9_\-]+)/.exec(location.hash||"");
+  if(!m) return;
+  history.replaceState(null,"",location.pathname+location.search);
+  var did=[];
+  try{
+    var data=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,"+").replace(/_/g,"/")))));
+    did=applyAsk(data,true);
+  }catch(e){ alert("That link didn't load: "+e.message); return; }
+  var meals=did.filter(function(d){ return /planned|cleared/.test(d); }).length;
+  var rest=did.filter(function(d){ return !/planned|cleared/.test(d); });
+  if(meals) rest.unshift(meals+" meal"+(meals===1?"":"s")+" planned");
+  setTimeout(function(){ alert(rest.length? "Loaded: "+rest.join(", ")+"." : "Nothing new in that link."); },300);
+})();
 if(askCfg) cfg=serverCfg();
 else if(lsGet(ASKPEND)&&!cfg) setSync("off","Connect");
 if(cfg) setSync("busy","Syncing…");
