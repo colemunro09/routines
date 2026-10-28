@@ -493,7 +493,7 @@ details[open] summary .chev{transform:rotate(180deg)}
   background:var(--accent-soft);color:var(--ink-2);font-size:13px;line-height:1.5;
 }
 
-/* ---------- tabs: Today, Meals, Groceries ---------- */
+/* ---------- tabs: Today, Meals, Groceries, Workouts, Ask ---------- */
 .tabs{
   position:fixed;left:0;right:0;bottom:0;z-index:25;
   background:var(--paper);
@@ -616,8 +616,46 @@ details[open] summary .chev{transform:rotate(180deg)}
 .nsync .pane-sub{margin:0}
 .nsync .pane-sub.err{color:var(--danger)}
 .nsync .btn{padding:8px 12px;min-height:44px;font-size:12.5px}
+
+/* workouts: the same cards, rows and ticks again. New here: a session's note and its
+   part headings, a test's best-and-status column, and the result history. */
+.dayb:disabled{opacity:.4;cursor:default}
+.tnote{margin:0;padding:11px 16px;font-size:13.5px;line-height:1.5;color:var(--ink-2);border-bottom:1px solid var(--line-soft)}
+.tpart{
+  padding:12px 16px 5px;border-top:1px solid var(--line-soft);
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-3);
+}
+.rows .tpart:first-child{border-top:0}
+.rows .tpart + .row{border-top:0}
+.tchev{flex:none;display:flex;color:var(--ink-3);margin-right:-4px}
+.tchev svg{width:15px;height:15px}
+.tval{flex:none;margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.tval b{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:14px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--ink)}
+.tval span{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.tval.none b{color:var(--ink-3)}
+.tval.target span,.tval.meets span{color:var(--accent)}
+.tval.below span{color:var(--danger)}
+.tlog{
+  flex:none;min-height:44px;min-width:44px;margin-right:-8px;padding:0 8px;background:none;border:0;cursor:pointer;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accent);
+}
+.row.static{cursor:default}
+.row.static:active{background:none}
+.star{color:var(--accent);margin-right:5px}
+.thist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column}
+.thist li{display:flex;align-items:center;gap:10px;min-height:44px;border-top:1px solid var(--line-soft);font-size:14px}
+.thist li:first-child{border-top:0}
+.thist .hd{flex:none;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.thist .hv{flex:none;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
+.thist .hn{flex:1;min-width:0;color:var(--ink-2);font-size:13px;overflow-wrap:anywhere}
+.thist .mini{width:44px;height:44px;margin-right:-10px}
+.gedit .dpad select{font-family:inherit;font-size:16px}
+.gedit details{background:var(--surface)}
 /* Ask: questions to the Routines Console server. Same surfaces and type as the list. */
 .tell{display:flex;flex-direction:column;gap:8px;margin:14px 0 6px}
+.tell:empty{display:none}
 .tell .hint{margin:0 2px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
 .ask-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .ask-bar .eyebrow{
@@ -684,6 +722,7 @@ details[open] summary .chev{transform:rotate(180deg)}
   <div id="stats" hidden></div>
   <div id="meals" hidden></div>
   <div id="groceries" hidden></div>
+  <div id="train" hidden></div>
   <div id="quoteHost"></div>
   <div id="sections"></div>
   <div class="dnote" id="dayNote" hidden></div>
@@ -703,6 +742,7 @@ details[open] summary .chev{transform:rotate(180deg)}
     <button class="tab" type="button" data-tab="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.7 2.7L16 10"/></svg><span>Today</span></button>
     <button class="tab" type="button" data-tab="meals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a2 2 0 0 0 4 0V3M7 10v11M17 21V3c-2 0-3.5 2.5-3.5 6s1.5 4 3.5 4"/></svg><span>Meals</span></button>
     <button class="tab" type="button" data-tab="groceries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg><span>Groceries</span></button>
+    <button class="tab" type="button" data-tab="train"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg><span>Workouts</span></button>
   </div>
 </nav>
 
@@ -801,11 +841,12 @@ function migrate(doc){
   return doc;
 }
 
-/* ---------- lists: meals and groceries ----------
-   Two standing lists beside the daily one. Neither belongs to a day: they live on
-   the document and sync with it, but never touch the log, the streaks or the 2am
-   rollover. Each carries its own mtime so it merges on its own (see mergeDocs). */
-var LIST_KEYS=["groceries","meals"];
+/* ---------- lists: meals, groceries and workouts ----------
+   Standing lists beside the daily one. They live on the document and sync with it,
+   but never touch the habit log or the streaks - workouts file their session ticks
+   by day, in their own list. Each carries its own mtime so it merges on its own
+   (see mergeDocs). */
+var LIST_KEYS=["groceries","meals","train"];
 var MEAL_FIELDS=[
   {k:"main",label:"Main"},{k:"side",label:"Veg & nuts"},{k:"fruit",label:"Fruit"},{k:"drink",label:"Drink"}
 ];
@@ -824,6 +865,42 @@ function seedOptions(){
   });
   return o;
 }
+/* Workouts: tests [name, group, unit, min, target, better], sessions, and a library
+   [name, dose, cue, group]. Generic too - the owner's own come in by import. */
+var TRAIN_SEED={
+  tests:[
+    ["Push-ups (max)","Strength","reps","","40","higher"],
+    ["Pull-ups (strict)","Strength","reps","","10","higher"],
+    ["Plank hold","Strength","time","","2:00","higher"],
+    ["5 km run","Aerobic","time","","25:00","lower"]
+  ],
+  sessions:[
+    {title:"Warm-up",group:"Mobility",note:"Before any session. Dynamic moves only.",
+     items:[["Arm circles","10 each way"],["Leg swings","10/side"],["Walking lunges","10/side"],["Glute bridge","2 × 15"]]},
+    {title:"Full body",group:"Workouts",note:"Rest 60–90 s between sets.",
+     items:[["Squat","3 × 8"],["Push-ups","3 × max"],["Rows","3 × 10"],["Plank","3 × 30 s"]]}
+  ],
+  library:[
+    ["Squat","3 × 8","Brace, knees track toes","Legs"],
+    ["Push-ups","3 × max","Chest to floor, full lockout","Upper body"],
+    ["Rows","3 × 10","Squeeze the shoulder blades","Upper body"],
+    ["Plank","3 × 30 s","Ribs down, glutes on","Core"]
+  ]
+};
+function seedTrain(){
+  return {
+    tests:TRAIN_SEED.tests.map(function(x){
+      return {id:uid(),name:x[0],group:x[1],unit:x[2],min:x[3],target:x[4],better:x[5],note:""};
+    }),
+    results:[],
+    sessions:TRAIN_SEED.sessions.map(function(s){
+      return {id:uid(),title:s.title,group:s.group,note:s.note,
+              items:s.items.map(function(x){ return {id:uid(),name:x[0],dose:x[1]}; })};
+    }),
+    library:TRAIN_SEED.library.map(function(x){ return {id:uid(),name:x[0],dose:x[1],cue:x[2],group:x[3]}; }),
+    days:{}, mtime:0
+  };
+}
 /* Fill in whatever a document is missing. Run on local state only - never on a
    remote copy before merging, or the empty defaults would look like real data. */
 function shapeLists(doc){
@@ -835,6 +912,10 @@ function shapeLists(doc){
   if(!m.options||typeof m.options!=="object") m.options=seedOptions();
   MEAL_FIELDS.forEach(function(f){ if(!Array.isArray(m.options[f.k])) m.options[f.k]=[]; });
   if(!m.plan||typeof m.plan!=="object") m.plan={};
+  if(!doc.train||typeof doc.train!=="object") doc.train=seedTrain();
+  var w=doc.train;
+  ["tests","results","sessions","library"].forEach(function(k){ if(!Array.isArray(w[k])) w[k]=[]; });
+  if(!w.days||typeof w.days!=="object") w.days={};
   return doc;
 }
 
@@ -944,7 +1025,7 @@ function mergeDocs(local,remote){
      otherwise blank a pad this device already holds. */
   if(typeof out.scratch!=="string")
     out.scratch=typeof older.scratch==="string"?older.scratch:"";
-  /* Groceries and meals each carry their own mtime and merge on it, not on the
+  /* Groceries, meals and workouts each carry their own mtime and merge on it, not on the
      document's. A habit ticked offline on one device must not roll back a grocery
      list edited on another, and an older build that has never seen these fields
      must not erase them. */
@@ -1174,6 +1255,9 @@ var ICON={
   edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   bag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>',
   cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.2 11h10.6L20 8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg>',
+  dumbbell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>',
+  flag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2Z"/><path d="M4 19V5"/></svg>',
   disk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M9 3v6h6V3M8 21v-6h8v6"/></svg>'
 };
 
@@ -2365,6 +2449,380 @@ function findGrocery(name){
   return hit;
 }
 
+/* ----- workouts -----
+   Tests are benchmarks with an official minimum and your own target; results are the
+   log behind them, and Best and Status are always worked out from that log, never
+   stored. Sessions are ready-made routines ticked through on a day: the ticks file
+   under the civil day in train.days, so the week strip shows which days you trained. */
+var TRAIN_SEGS=[["sessions","Sessions"],["tests","Tests"],["library","Library"]];
+var TEST_STATUS={target:"At target",meets:"Meets standard",below:"Below standard",short:"Short of target",logged:"Logged",none:"Not tested"};
+var trainSeg="sessions", trainSess=null, trainDay=null, testEditing=null, libFind="";
+
+/* "12:30" and "1:15:00" are seconds, "Pass" is 1 and "Fail" 0, anything else its first number */
+function testNum(v){
+  v=String(v==null?"":v).trim();
+  if(!v) return null;
+  if(/^pass/i.test(v)) return 1;
+  if(/^fail/i.test(v)) return 0;
+  if(/\d:\d/.test(v)){
+    var p=v.replace(/[^\d:.]/g,"").split(":").map(Number);
+    if(p.some(isNaN)) return null;
+    return p.reduce(function(a,x){ return a*60+x; },0);
+  }
+  var m=/-?\d+(\.\d+)?/.exec(v);
+  return m? parseFloat(m[0]) : null;
+}
+/* a goal is stored bare; the direction comes from better, so "≥ 40" is shown, not kept */
+function goalClean(v){ return String(v==null?"":v).replace(/^[≥≤<>=\s]+/,"").trim(); }
+function goalText(t,v){
+  v=goalClean(v);
+  if(!v||t.better==="pass"||testNum(v)==null) return v;
+  return (t.better==="lower"?"≤ ":"≥ ")+v;
+}
+function reaches(t,a,goal){ return t.better==="lower"? a<=goal : a>=goal; }
+function findTest(name){
+  var k=String(name||"").trim().toLowerCase(), hit=null;
+  state.train.tests.forEach(function(t){ if(t.name.toLowerCase()===k) hit=t; });
+  return hit;
+}
+function testById(id){
+  var hit=null; state.train.tests.forEach(function(t){ if(t.id===id) hit=t; });
+  return hit;
+}
+function resultsOf(t){
+  return state.train.results.filter(function(r){ return r.test===t.id; })
+    .sort(function(a,b){ return a.date<b.date?1:a.date>b.date?-1:0; });
+}
+/* newest first, so a tie goes to the latest attempt */
+function testBest(t){
+  var best=null, bn=null;
+  resultsOf(t).forEach(function(r){
+    var n=testNum(r.v); if(n==null) return;
+    if(best==null||(t.better==="lower"? n<bn : n>bn)){ best=r; bn=n; }
+  });
+  return best;
+}
+function testStatus(t){
+  var best=testBest(t);
+  if(!best) return "none";
+  var b=testNum(best.v), g=testNum(goalClean(t.target)), m=testNum(goalClean(t.min));
+  if(g!=null&&reaches(t,b,g)) return "target";
+  if(m!=null) return reaches(t,b,m)?"meets":"below";
+  return g!=null?"short":"logged";
+}
+function testMet(t){ var s=testStatus(t); return s==="meets"||s==="target"; }
+
+/* the strip only reaches back to Monday and never past today */
+function trainKey(){
+  if(trainDay==null||trainDay>weekIdx()) trainDay=weekIdx();
+  return keyOf(dayDate(trainDay));
+}
+function ticksOn(k,sid){ var d=state.train.days[k]; return (d&&d[sid])||{}; }
+function trainedOn(k){
+  var d=state.train.days[k];
+  return d? state.train.sessions.filter(function(s){ return d[s.id]; }).length : 0;
+}
+function sessionCount(s,k){
+  var t=ticksOn(k,s.id), n=0;
+  s.items.forEach(function(it){ if(t[it.id]) n++; });
+  return n;
+}
+function tickMove(k,sid,iid){
+  var days=state.train.days, d=days[k]||(days[k]={}), s=d[sid]||(d[sid]={});
+  if(s[iid]) delete s[iid]; else s[iid]=1;
+  if(!Object.keys(s).length) delete d[sid];
+  if(!Object.keys(d).length) delete days[k];
+  listStamp("train");
+}
+
+function trainSessions(pane,sub){
+  var w=state.train, ti=weekIdx(), k=trainKey(), trained=0;
+  var strip=mk("div","days");
+  strip.setAttribute("role","tablist"); strip.setAttribute("aria-label","Day of the week");
+  WEEKDAYS.forEach(function(name,i){
+    var n=i<=ti? trainedOn(keyOf(dayDate(i))) : 0, on=i===trainDay;
+    if(n) trained++;
+    var b=mk("button","dayb"+(on?" on":"")+(i===ti?" today":"")); b.type="button";
+    b.setAttribute("role","tab"); b.setAttribute("aria-selected",on?"true":"false");
+    b.setAttribute("aria-label",name+(i===ti?", today":"")+(n?", trained":""));
+    b.disabled=i>ti;
+    b.appendChild(mk("span","dl",name.slice(0,3)));
+    b.appendChild(mk("span","dn",String(dayDate(i).getDate())));
+    var bar=mk("span","db"), bf=mk("i"); bf.style.width=(n?100:0)+"%"; bar.appendChild(bf); b.appendChild(bar);
+    b.addEventListener("click",function(){ trainDay=i; render(); });
+    strip.appendChild(b);
+  });
+  sub.textContent="Week of "+fmtDay(weekStart())+" · "+trained+" training day"+(trained===1?"":"s");
+  pane.appendChild(strip);
+
+  var sess=null;
+  w.sessions.forEach(function(s){ if(s.id===trainSess) sess=s; });
+  if(sess){
+    var back=mk("button","linkbtn","‹ All sessions"); back.type="button"; back.style.alignSelf="flex-start";
+    back.addEventListener("click",function(){ trainSess=null; render(); window.scrollTo(0,0); });
+    pane.appendChild(back);
+    pane.appendChild(sessionCard(sess,k));
+    if(sessionCount(sess,k)){
+      var foot=mk("div","pane-foot"), cl=mk("button","linkbtn","Clear these ticks"); cl.type="button";
+      cl.addEventListener("click",function(){
+        var d=w.days[k]; if(!d) return;
+        delete d[sess.id]; if(!Object.keys(d).length) delete w.days[k];
+        listStamp("train"); render();
+      });
+      foot.appendChild(cl); pane.appendChild(foot);
+    }
+    return;
+  }
+  if(!w.sessions.length){
+    var e=mk("div","sec"), ep=mk("div","lempty");
+    ep.appendChild(mk("p",null,"No sessions yet. Tell it about one, or load your workouts from a link."));
+    e.appendChild(ep); pane.appendChild(e);
+  }
+  groupBy(w.sessions,function(s){ return s.group||"Sessions"; }).forEach(function(g){
+    var card=mk("div","sec"), sh=mk("div","sec-head");
+    sh.innerHTML=ICON.dumbbell;
+    sh.appendChild(mk("span","sec-title",g.name));
+    sh.appendChild(mk("span","sec-count",String(g.items.length)));
+    card.appendChild(sh);
+    var rows=mk("div","rows");
+    g.items.forEach(function(s){
+      var n=sessionCount(s,k), row=mk("button","row gi"); row.type="button";
+      var tx=mk("span","gtext"); tx.appendChild(mk("span","label",s.title));
+      tx.appendChild(mk("span","gsub",s.items.length+" move"+(s.items.length===1?"":"s")));
+      row.appendChild(tx);
+      if(n) row.appendChild(mk("span","hstreak",n+"/"+s.items.length));
+      var ch=mk("span","tchev"); ch.innerHTML=ICON.right; row.appendChild(ch);
+      row.addEventListener("click",function(){ trainSess=s.id; render(); window.scrollTo(0,0); });
+      rows.appendChild(row);
+    });
+    card.appendChild(rows);
+    pane.appendChild(card);
+  });
+}
+function sessionCard(s,k){
+  var ticks=ticksOn(k,s.id), card=mk("div","sec"), sh=mk("div","sec-head");
+  sh.innerHTML=ICON.dumbbell;
+  sh.appendChild(mk("span","sec-title",s.title));
+  sh.appendChild(mk("span","sec-count",sessionCount(s,k)+"/"+s.items.length));
+  card.appendChild(sh);
+  if(s.note) card.appendChild(mk("p","tnote",s.note));
+  var rows=mk("div","rows"), part="";
+  s.items.forEach(function(it){
+    if((it.part||"")!==part){ part=it.part||""; if(part) rows.appendChild(mk("div","tpart",part)); }
+    var on=!!ticks[it.id], row=mk("div","row gi");
+    row.setAttribute("role","checkbox"); row.setAttribute("aria-checked",on?"true":"false");
+    row.setAttribute("aria-pressed",on?"true":"false"); row.tabIndex=0;
+    row.innerHTML='<span class="box">'+ICON.check+'</span>';
+    var tx=mk("span","gtext"); tx.appendChild(mk("span","label",it.name));
+    var sub=[it.dose,it.cue].filter(Boolean).join(" · ");
+    if(sub) tx.appendChild(mk("span","gsub",sub));
+    if(it.alt) tx.appendChild(mk("span","gsub","Easier: "+it.alt));
+    row.appendChild(tx);
+    /* a move that is also a test gets a way to log it without leaving the session for long */
+    var test=it.test&&findTest(it.test);
+    if(test){
+      var lb=mk("button","tlog","Log"); lb.type="button"; lb.setAttribute("aria-label","Log a result for "+test.name);
+      lb.addEventListener("click",function(e){
+        e.stopPropagation(); trainSeg="tests"; testEditing=test.id; render();
+        var ed=document.querySelector("#train .gedit"); if(ed) ed.scrollIntoView({block:"center"});
+      });
+      row.appendChild(lb);
+    }
+    function flip(){ tickMove(k,s.id,it.id); buzz(); render(); }
+    row.addEventListener("click",flip);
+    row.addEventListener("keydown",function(e){ if(e.target===row&&(e.key===" "||e.key==="Enter")){ e.preventDefault(); flip(); } });
+    rows.appendChild(row);
+  });
+  card.appendChild(rows);
+  return card;
+}
+
+function trainTests(pane,sub){
+  var tests=state.train.tests, std=0, met=0, untested=0;
+  tests.forEach(function(t){
+    if(testStatus(t)==="none") untested++;
+    if(testNum(goalClean(t.min))!=null){ std++; if(testMet(t)) met++; }
+  });
+  sub.textContent=(std? met+" of "+std+" standards met · " : "")+untested+" not tested";
+  pane.appendChild(datalist("dl_tgroups",tests.map(function(t){ return t.group; })));
+  groupBy(tests,function(t){ return t.group||"Other"; }).forEach(function(g){
+    var card=mk("div","sec"), sh=mk("div","sec-head");
+    var m=g.items.filter(testMet).length;
+    sh.innerHTML=ICON.flag;
+    sh.appendChild(mk("span","sec-title",g.name));
+    sh.appendChild(mk("span","sec-count",m+"/"+g.items.length+" met"));
+    card.appendChild(sh);
+    var rows=mk("div","rows");
+    g.items.forEach(function(t){
+      rows.appendChild(testRow(t));
+      if(testEditing===t.id) rows.appendChild(testEditor(t));
+    });
+    card.appendChild(rows);
+    pane.appendChild(card);
+  });
+  var foot=mk("div","pane-foot"), ab=mk("button","linkbtn","Add a test"); ab.type="button";
+  ab.addEventListener("click",function(){
+    var t={id:uid(),name:"New test",group:"Other",unit:"reps",min:"",target:"",better:"higher",note:""};
+    state.train.tests.push(t); testEditing=t.id; listStamp("train"); render();
+    var ed=document.querySelector("#train .gedit"); if(ed) ed.scrollIntoView({block:"center"});
+  });
+  foot.appendChild(ab); pane.appendChild(foot);
+}
+function testRow(t){
+  var st=testStatus(t), best=testBest(t), row=mk("button","row gi"); row.type="button";
+  row.setAttribute("aria-expanded",testEditing===t.id?"true":"false");
+  var tx=mk("span","gtext"); tx.appendChild(mk("span","label",t.name));
+  var bits=[t.unit];
+  if(testNum(goalClean(t.min))!=null) bits.push("Min "+goalText(t,t.min));
+  if(goalClean(t.target)) bits.push("Target "+goalText(t,t.target));
+  if(t.note) bits.push(t.note);
+  var sub=bits.filter(Boolean).join(" · ");
+  if(sub) tx.appendChild(mk("span","gsub",sub));
+  row.appendChild(tx);
+  var val=mk("span","tval "+st);
+  val.appendChild(mk("b",null,best?best.v:"—"));
+  val.appendChild(mk("span",null,TEST_STATUS[st]));
+  row.appendChild(val);
+  row.addEventListener("click",function(){ testEditing = testEditing===t.id ? null : t.id; render(); });
+  return row;
+}
+function testEditor(t){
+  var box=mk("div","gedit"), pad=mk("div","dpad");
+  var hint = t.unit==="time" ? "m:ss, e.g. 12:30" : t.better==="pass" ? "Pass or Fail" : (t.unit||"");
+  var fv=field("Result","",hint), fd=field("Date",day,""), fn=field("Note","","Conditions, how it felt");
+  fd.input.type="date"; fd.input.max=day;
+  fn.input.autocapitalize="sentences";
+  if(t.unit!=="time"&&t.better!=="pass") fv.input.inputMode="decimal";
+  [fv,fd,fn].forEach(function(f){ pad.appendChild(f); });
+  var msg=mk("p","hint"); msg.hidden=true; pad.appendChild(msg);
+  pad.appendChild(mkBtn("Log result","primary",function(){
+    var v=fv.input.value.trim();
+    if(testNum(v)==null){ msg.textContent=v?"That isn't a result I can compare. Try "+(hint||"a number")+".":"Type a result first."; msg.hidden=false; return; }
+    state.train.results.push({id:uid(),test:t.id,date:fd.input.value||day,v:v,note:fn.input.value.trim()});
+    listStamp("train"); render();
+  }));
+
+  var hist=resultsOf(t);
+  if(hist.length){
+    pad.appendChild(mk("label",null,"History"));
+    var ul=mk("ul","thist");
+    hist.forEach(function(r){
+      var li=mk("li");
+      li.appendChild(mk("span","hd",r.date));
+      li.appendChild(mk("span","hv",r.v));
+      li.appendChild(mk("span","hn",r.note||""));
+      var del=mk("button","mini del"); del.type="button"; del.innerHTML=ICON.trash;
+      del.setAttribute("aria-label","Delete the result from "+r.date);
+      del.addEventListener("click",function(){
+        if(!confirm("Delete "+r.v+" from "+fmtDay(r.date)+"?")) return;
+        state.train.results=state.train.results.filter(function(x){ return x!==r; });
+        listStamp("train"); render();
+      });
+      li.appendChild(del);
+      ul.appendChild(li);
+    });
+    pad.appendChild(ul);
+  }
+
+  var det=document.createElement("details");
+  det.appendChild(summaryRow("edit","Edit test",null));
+  var ep=mk("div","dpad");
+  var fName=field("Test",t.name,""), fGroup=field("Group",t.group,"Strength"), fUnit=field("Unit",t.unit,"reps, time, kg, pass/fail"),
+      fMin=field("Official minimum",t.min,"Leave blank if there isn't one"), fTarget=field("Your target",t.target,""),
+      fNote=field("Note",t.note,"");
+  fGroup.input.setAttribute("list","dl_tgroups");
+  [fName,fGroup,fUnit,fMin,fTarget,fNote].forEach(function(f){ ep.appendChild(f); });
+  var bf=mk("div","field"), bl=mk("label",null,"Better is"), bs=document.createElement("select");
+  [["higher","Higher"],["lower","Lower (times)"],["pass","Pass / fail"]].forEach(function(o){ bs.appendChild(new Option(o[1],o[0])); });
+  bs.value=t.better||"higher"; bl.setAttribute("for",bs.id="f_"+uid());
+  bf.appendChild(bl); bf.appendChild(bs); ep.appendChild(bf);
+  var row=mk("div","row2");
+  row.appendChild(mkBtn("Save","primary",function(){
+    var n=fName.input.value.trim(); if(!n) return;
+    t.name=n; t.group=fGroup.input.value.trim(); t.unit=fUnit.input.value.trim();
+    t.min=goalClean(fMin.input.value); t.target=goalClean(fTarget.input.value);
+    t.note=fNote.input.value.trim(); t.better=bs.value;
+    listStamp("train"); render();
+  }));
+  row.appendChild(mkBtn("Delete","ghost danger",function(){
+    var n=resultsOf(t).length;
+    if(!confirm("Delete "+t.name+(n?" and its "+n+" result"+(n===1?"":"s"):"")+"?")) return;
+    state.train.tests=state.train.tests.filter(function(x){ return x!==t; });
+    state.train.results=state.train.results.filter(function(x){ return x.test!==t.id; });
+    testEditing=null; listStamp("train"); render();
+  }));
+  ep.appendChild(row);
+  det.appendChild(ep);
+  pad.appendChild(det);
+  box.appendChild(pad);
+  return box;
+}
+
+function trainLibrary(pane,sub){
+  var lib=state.train.library;
+  var find=mk("form","find"), fin=document.createElement("input");
+  fin.placeholder="Find an exercise"; fin.value=libFind; fin.setAttribute("aria-label","Find an exercise");
+  fin.type="search"; fin.enterKeyHint="search";
+  find.appendChild(fin);
+  fin.addEventListener("input",function(){
+    libFind=fin.value; var pos=fin.selectionStart; render();
+    var again=document.querySelector("#train .find input"); if(again){ again.focus(); try{ again.setSelectionRange(pos,pos); }catch(e){} }
+  });
+  find.addEventListener("submit",function(e){ e.preventDefault(); fin.blur(); });
+  pane.appendChild(find);
+  var q=libFind.trim().toLowerCase();
+  var shown=q? lib.filter(function(x){
+    return [x.name,x.group,x.carry,x.cue].join(" ").toLowerCase().indexOf(q)>=0;
+  }) : lib;
+  sub.textContent=(q? shown.length+" of " : "")+lib.length+" exercise"+(lib.length===1?"":"s");
+  if(!shown.length){
+    var e=mk("div","sec"), ep=mk("div","lempty");
+    ep.appendChild(mk("p",null,lib.length?"Nothing matches “"+libFind.trim()+"”.":"No exercises yet. They load from a link built from your sheet."));
+    e.appendChild(ep); pane.appendChild(e);
+  }
+  groupBy(shown,function(x){ return x.group||"Other"; }).forEach(function(g){
+    var card=mk("div","sec"), sh=mk("div","sec-head");
+    sh.innerHTML=ICON.book;
+    sh.appendChild(mk("span","sec-title",g.name));
+    sh.appendChild(mk("span","sec-count",String(g.items.length)));
+    card.appendChild(sh);
+    var rows=mk("div","rows");
+    g.items.forEach(function(x){
+      var row=mk("div","row gi static"), tx=mk("span","gtext"), lab=mk("span","label");
+      if(x.star){ var st=mk("span","star","★"); st.title="Trains a test directly"; lab.appendChild(st); }
+      lab.appendChild(document.createTextNode(x.name));
+      tx.appendChild(lab);
+      var sub=[x.dose,x.cue].filter(Boolean).join(" · ");
+      if(sub) tx.appendChild(mk("span","gsub",sub));
+      if(x.carry) tx.appendChild(mk("span","gsub","→ "+x.carry));
+      row.appendChild(tx);
+      rows.appendChild(row);
+    });
+    card.appendChild(rows);
+    pane.appendChild(card);
+  });
+}
+
+function renderTrain(){
+  var host=$("train"); host.innerHTML="";
+  var pane=mk("div","pane"), head=mk("div","pane-head"), t=mk("div"), sub=mk("div","pane-sub");
+  t.appendChild(mk("h2",null,"Workouts")); t.appendChild(sub);
+  head.appendChild(t); pane.appendChild(head);
+  var tellW=mk("div","tell"); tellBox(tellW,"Tell it","Log a result, or say what you did\u2026"); pane.appendChild(tellW);
+  var seg=mk("div","seg");
+  TRAIN_SEGS.forEach(function(o){
+    var b=mk("button",trainSeg===o[0]?"on":null,o[1]); b.type="button";
+    b.setAttribute("aria-pressed",trainSeg===o[0]?"true":"false");
+    b.addEventListener("click",function(){ trainSeg=o[0]; testEditing=null; render(); window.scrollTo(0,0); });
+    seg.appendChild(b);
+  });
+  pane.appendChild(seg);
+  if(trainSeg==="tests") trainTests(pane,sub);
+  else if(trainSeg==="library") trainLibrary(pane,sub);
+  else trainSessions(pane,sub);
+  host.appendChild(pane);
+}
+
 /* ----- import ----------
    One paste box for three things. A grocery sheet copied from Sheets or Excel
    arrives as tab-separated rows; a CSV export as comma-separated; an import
@@ -2402,6 +2860,95 @@ function importHabits(sections){
   });
   if(added) touchToday();
   return added;
+}
+/* Workouts in the Tell it block shape. Tests and library entries match by name,
+   sessions by title, results by test + date + value; a matched session takes the
+   block's moves in its order, keeping the ids of moves it already had so the day's
+   ticks survive. done ticks a session's moves on a day (all of them when no moves are
+   named). A link (whole) carries the owner's whole list, so the kinds it holds replace
+   what is here - the starter set included - while a spoken change only ever adds.
+   Replaced entries keep their ids when a name comes back, so results stay attached.
+   Returns one short line per thing changed, for the chips. */
+function importWorkouts(src,whole){
+  var w=state.train, n={tests:0,results:0,sessions:0,library:0,done:0}, prev={};
+  function str(v){ return String(v==null?"":v).trim(); }
+  function nameOf(x){ return str(x.name!=null?x.name:x.title).toLowerCase(); }
+  if(whole) ["tests","sessions","library"].forEach(function(k){
+    if(!Array.isArray(src[k])||!src[k].length) return;
+    prev[k]={}; w[k].forEach(function(x){ prev[k][nameOf(x)]=x; }); w[k]=[];
+  });
+  function find(k,name){
+    var key=name.toLowerCase(), hit=null;
+    w[k].forEach(function(x){ if(nameOf(x)===key) hit=x; });
+    if(!hit&&prev[k]&&prev[k][key]){ hit=prev[k][key]; delete prev[k][key]; w[k].push(hit); }
+    return hit;
+  }
+  (src.tests||[]).forEach(function(x){
+    var name=str(x.name); if(!name) return;
+    var t=find("tests",name);
+    if(!t){ t={id:uid(),name:name,group:"",unit:"",min:"",target:"",better:"higher",note:""}; w.tests.push(t); }
+    ["group","unit","note"].forEach(function(k){ if(x[k]!=null) t[k]=str(x[k]); });
+    ["min","target"].forEach(function(k){ if(x[k]!=null) t[k]=goalClean(x[k]); });
+    if(x.better) t.better=/low/i.test(x.better)?"lower":/pass/i.test(x.better)?"pass":"higher";
+    n.tests++;
+  });
+  if(prev.tests){
+    var keep={}; w.tests.forEach(function(t){ keep[t.id]=1; });
+    w.results=w.results.filter(function(r){ return keep[r.test]; });
+  }
+  (src.results||[]).forEach(function(r){
+    var t=findTest(r.test), v=str(r.result!=null?r.result:r.v), d=str(r.date)||day;
+    if(!t||testNum(v)==null||!/^\d{4}-\d\d-\d\d$/.test(d)) return;
+    if(w.results.some(function(x){ return x.test===t.id&&x.date===d&&x.v===v; })) return;
+    w.results.push({id:uid(),test:t.id,date:d,v:v,note:str(r.note)}); n.results++;
+  });
+  (src.sessions||[]).forEach(function(s){
+    var title=str(s.title); if(!title) return;
+    var hit=find("sessions",title);
+    if(!hit){ hit={id:uid(),title:title,group:"",note:"",items:[]}; w.sessions.push(hit); }
+    if(s.group!=null) hit.group=str(s.group);
+    if(s.note!=null) hit.note=str(s.note);
+    if(Array.isArray(s.items)){
+      var old={};
+      hit.items.forEach(function(it){ old[it.name.toLowerCase()]=it.id; });
+      hit.items=s.items.map(function(x){
+        if(typeof x==="string") x={name:x};
+        var name=str(x.name), key=name.toLowerCase(); if(!name) return null;
+        var it={id:old[key]||uid(),name:name}; delete old[key];
+        ["dose","cue","alt","part","test"].forEach(function(k){ if(str(x[k])) it[k]=str(x[k]); });
+        return it;
+      }).filter(Boolean);
+    }
+    n.sessions++;
+  });
+  (src.library||[]).forEach(function(x){
+    var name=str(x.name); if(!name) return;
+    var hit=find("library",name);
+    if(!hit){ hit={id:uid(),name:name}; w.library.push(hit); }
+    ["dose","cue","carry","group"].forEach(function(k){ if(x[k]!=null) hit[k]=str(x[k]); });
+    if(x.star!=null){ if(x.star===true||truthy(x.star)||x.star==="\u2605") hit.star=true; else delete hit.star; }
+    n.library++;
+  });
+  (src.done||[]).forEach(function(e){
+    var title=str(e.session).toLowerCase(), d=str(e.date)||day, sess=null;
+    w.sessions.forEach(function(x){ if(x.title.toLowerCase()===title) sess=x; });
+    if(!sess||!/^\d{4}-\d\d-\d\d$/.test(d)||d>day) return;
+    var names=Array.isArray(e.moves)? e.moves.map(function(m){ return str(m).toLowerCase(); }) : null;
+    var dd=w.days[d]||(w.days[d]={}), tk=dd[sess.id]||(dd[sess.id]={}), before=Object.keys(tk).length;
+    sess.items.forEach(function(it){ if(!names||names.indexOf(it.name.toLowerCase())>=0) tk[it.id]=1; });
+    if(!Object.keys(tk).length) delete dd[sess.id];
+    if(!Object.keys(dd).length) delete w.days[d];
+    if(Object.keys(tk).length>before) n.done++;
+  });
+  var did=[];
+  function count(k,one,many){ if(n[k]) did.push(n[k]+" "+(n[k]===1?one:many)); }
+  count("tests","test","tests");
+  count("results","result logged","results logged");
+  count("sessions","session","sessions");
+  count("library","exercise","exercises");
+  count("done","session ticked","sessions ticked");
+  if(did.length) w.mtime=Date.now();
+  return did;
 }
 /* ---------- tell it ----------
    One line on Today, Meals and Groceries where the person says what they want -
@@ -2466,6 +3013,24 @@ function askContext(){
     }).filter(Boolean);
     if(parts.length) lines.push("- "+d+(i===weekIdx()?" (today)":"")+": "+parts.join("; "));
   });
+  var tr=state.train;
+  lines.push("");
+  lines.push("Workout sessions this week:");
+  WEEKDAYS.forEach(function(d,i){
+    if(i>weekIdx()) return;
+    var k=keyOf(dayDate(i)), done=tr.sessions.filter(function(s){ return sessionCount(s,k); }).map(function(s){
+      return s.title+" ("+sessionCount(s,k)+"/"+s.items.length+" moves)";
+    });
+    if(done.length) lines.push("- "+d+": "+done.join(", "));
+  });
+  lines.push("");
+  lines.push("Fitness tests:");
+  tr.tests.forEach(function(t){
+    var b=testBest(t), bits=[b? "best "+b.v+" on "+b.date : "not tested"];
+    if(testNum(goalClean(t.min))!=null) bits.push("min "+goalText(t,t.min));
+    if(goalClean(t.target)) bits.push("target "+goalText(t,t.target));
+    lines.push("- "+t.name+(t.unit?" ("+t.unit+")":"")+": "+bits.join(", ")+" - "+TEST_STATUS[testStatus(t)]);
+  });
   return askRules()+"\n\n"+lines.join("\n").slice(0,12000);
 }
 
@@ -2482,24 +3047,31 @@ function askRules(){
   var groups=dedupe(state.groceries.items.map(function(it){ return it.group; }).filter(Boolean));
   return [
     "You are the assistant inside a personal routines app. When the person asks a question, answer it.",
-    "When the person tells you to change something - a meal plan, a meal prep or grocery schedule, the grocery list, a habit, or a note from their day - "+
+    "When the person tells you to change something - a meal plan, a meal prep or grocery schedule, the grocery list, a habit, a workout or fitness test result, or a note from their day - "+
     "confirm briefly in prose AND append exactly one fenced code block tagged routines containing JSON in this shape (include only the keys you change):",
     "```routines",
     '{"meals":{"plan":[{"day":"Monday","meal":"Dinner","main":"Salmon","side":"Rice","fruit":"","drink":"Water","note":"","clear":false}],'+
     '"options":{"main":[{"name":"Salmon","type":"Fish"}]},"slots":["Breakfast","Lunch","Dinner"]},'+
     '"groceries":[{"name":"Eggs","need":true,"store":"Costco","group":"Dairy","note":"2 dozen"}],'+
     '"habits":[{"title":"Morning","items":["Stretch"]}],'+
+    '"workouts":{"results":[{"test":"Push-ups (max)","date":"'+day+'","result":"42","note":""}],'+
+    '"done":[{"session":"Full body","date":"'+day+'","moves":["Squat"]}],'+
+    '"tests":[{"name":"Plank hold","group":"Strength","unit":"time","min":"","target":"2:00","better":"higher"}]},'+
     '"notes":["Ran into Sam at the gym"]}',
     "```",
     "Rules: meal plan entries name a weekday and one of the meal slots; a field left out is kept as it is, \"\" clears it, clear:true clears the whole meal. "+
     "Prefer meal option names from the lists below; a new name is added as an option. New grocery items default to need:true; "+
     "\"got it\" or \"don't need\" means need:false. Groceries match by name, so repeating one updates it. "+
     "notes are appended to the scratch pad with today's date - use them for anything the person wants jotted down. "+
+    "Workout results name a test exactly as listed below; times are m:ss or h:mm:ss, pass/fail tests take Pass or Fail, and the date defaults to today. "+
+    "done ticks a session's moves on a day - leave out moves to tick the whole session, and never use a future day. Add a test only when asked to track a new one. "+
     "Never put the block in a reply to a plain question, and never invent changes the person did not ask for.",
     "Meal slots: "+state.meals.slots.join(", ")+".",
     "Meal options - "+opts.join("; ")+".",
     "Stores known: "+(stores.join(", ")||"none")+". Food groups known: "+(groups.join(", ")||"none")+".",
-    "Habit sections: "+state.sections.map(function(x){ return x.title||"Untitled"; }).join(", ")+"."
+    "Habit sections: "+state.sections.map(function(x){ return x.title||"Untitled"; }).join(", ")+".",
+    "Fitness tests - "+(state.train.tests.map(function(t){ return t.name+(t.unit?" ("+t.unit+")":""); }).join("; ")||"none")+".",
+    "Workout sessions - "+(state.train.sessions.map(function(x){ return x.title; }).join("; ")||"none")+"."
   ].join("\n");
 }
 /* Split the block off a reply: {text, data}. data is null when there is none or it
@@ -2573,6 +3145,8 @@ function applyAsk(data,whole){
     var h=importHabits(data.habits);
     if(h) did.push(h+" habit"+(h===1?"":"s")+" added");
   }
+  if(data.workouts&&typeof data.workouts==="object")
+    did=did.concat(importWorkouts(data.workouts,whole));
   var notes=data.notes==null?[]:(Array.isArray(data.notes)?data.notes:[data.notes]);
   notes=notes.map(function(x){ return String(x||"").trim(); }).filter(Boolean);
   if(notes.length){
@@ -3037,6 +3611,7 @@ function render(){
   $("stats").hidden = !onStats;
   $("meals").hidden = view!=="meals";
   $("groceries").hidden = view!=="groceries";
+  $("train").hidden = view!=="train";
   $("tabs").hidden = onStats;
   Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){
     var on=b.getAttribute("data-tab")===view;
@@ -3047,6 +3622,7 @@ function render(){
   if(onStats){ renderStats(); return; }
   if(view==="meals"){ renderMeals(); return; }
   if(view==="groceries"){ renderGroceries(); paintNotion(); return; }
+  if(view==="train"){ renderTrain(); return; }
   renderQuote(); renderSections(); renderDayNote();
   tellBox($("tellToday"),"Tell it","Note something, or ask\u2026");
   renderEditTools(); renderLog(); renderNote();
@@ -3106,7 +3682,7 @@ Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){
   b.addEventListener("click",function(){
     var next=b.getAttribute("data-tab");
     if(next===view) { window.scrollTo({top:0,behavior:"smooth"}); return; }
-    endEdit(); groEditing=null; mealOptsOpen=false;
+    endEdit(); groEditing=null; mealOptsOpen=false; testEditing=null;
     view=next; render(); window.scrollTo(0,0);
   });
 });

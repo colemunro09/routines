@@ -6,8 +6,9 @@ Context for working on this repo. Read before editing `index.html`.
 
 A personal daily habit checklist, built for the owner. It installs to an iPhone home
 screen and a Mac dock, checkmarks reset at 2:00am, and the day rolls into a 14-day log
-with a streak counter. A standing scratch pad sits under the list. Two more tabs hold
-standing lists that never reset: a weekly meal-prep grid and a master grocery list. With
+with a streak counter. A standing scratch pad sits under the list. Three more tabs hold
+standing lists that never reset: a weekly meal-prep grid, a master grocery list, and
+Workouts (fitness tests, training sessions, an exercise library). With
 a Routines server connected, a one-line "Tell it" box on each tab takes dictation ("Monday
 dinner salmon and rice", "add eggs", "note I ran into Sam") and applies it in place.
 Optional Supabase sync keeps devices on the same list, and a service worker keeps it
@@ -51,11 +52,11 @@ URL, anon key, or secret key. None of those are in the repo today; keep it that 
 
 1. `<title>` and the Google Fonts link
 2. `<style>` — CSS custom properties in `:root`, then components
-3. Static markup — sticky header, `#stats`, `#meals`, `#groceries`, `#quoteHost`,
+3. Static markup — sticky header, `#stats`, `#meals`, `#groceries`, `#train`, `#quoteHost`,
    `#sections`, `#dayNote`, `#tellToday`, `#editTools`, `#log`, the FAB, the bottom tab bar
 4. `<script>` — one IIFE, in this order: meta injection, storage helpers, `DEFAULT`,
    `LESSONS`, the list constants and `shapeLists`, state load and migration, sync config
-   and transport, date helpers, icons, render functions, the meals/groceries/import UI,
+   and transport, date helpers, icons, render functions, the meals/groceries/workouts UI,
    the Tell it box and the Notion copy, `render()`, event wiring
 
 The two quote slots are picked each civil day from `LESSONS` plus `quote` and
@@ -91,17 +92,35 @@ does not edit the standing questions.
     plan: { "0|Breakfast": { main, side, fruit, drink, done, note } },  // 0 = Monday
     mtime: …
   },
+  train: {
+    tests: [ { id, name, group, unit, min, target, better: "higher"|"lower"|"pass", note } ],
+    results: [ { id, test: testId, date: "2026-10-01", v: "12:30", note } ],
+    sessions: [ { id, title, group, note,
+                  items: [ { id, name, dose, cue, alt, part, test } ] } ],  // test = a test's name
+    library: [ { id, name, dose, cue, carry, group, star } ],
+    days: { "2026-10-27": { sessionId: { itemId: 1 } } },   // session ticks, by civil day
+    mtime: …
+  },
   mtime: 1755993600000                        // last local edit, drives sync merge
 }
 ```
 
-`groceries` and `meals` are standing lists, not days: nothing in them touches `log`, the
-streaks or the 2am rollover. `store` may list several shops comma-separated; the Shop view
+`groceries`, `meals` and `train` are standing lists: nothing in them touches `log` or the
+streaks. `store` may list several shops comma-separated; the Shop view
 files an item under the first and shows the rest as "also …". `got` is the in-cart tick
 while shopping; Finish shopping turns `need` off for everything got. New week clears `done`
 and `note` in the meal plan and keeps the choices.
 
-`shapeLists()` fills in either list when missing (meal options start from a generic
+In `train`, `min` and `target` are stored bare ("12:00", not "≤ 12:00"); `better` gives the
+direction and the ≥/≤ is added on display. Best and Status are never stored - they are
+worked out from `results` every render (`testBest`, `testStatus`), so deleting a result
+fixes them. `testNum()` reads "12:30"/"1:15:00" as seconds and Pass/Fail as 1/0. Session
+ticks file under the civil day (`trainKey()`), and the week strip only reaches back to
+Monday and never past today. A session move with `test` gets a Log button that opens
+that test's editor. The four-item `TRAIN_SEED` is generic and only fills an empty
+document; a `#i=` link carrying workouts replaces it.
+
+`shapeLists()` fills in any of the lists when missing (meal options start from a generic
 `MEAL_SEED`). Run it on **local** state only - load, after a merge, after a restore. Never
 on a remote copy before `mergeDocs`, or its empty defaults would look like real data.
 
@@ -194,7 +213,7 @@ day level (`Object.assign({}, older.log, newer.log)`). That way a morning checke
 phone isn't erased by a laptop that's been open since yesterday. Don't "simplify" this into
 a whole-document overwrite.
 
-`groceries` and `meals` also merge on their own, each by its own `mtime`, never the
+`groceries`, `meals` and `train` also merge on their own (`LIST_KEYS`), each by its own `mtime`, never the
 document's. A habit ticked offline on one device would otherwise roll back a grocery list
 edited on another, and an older build that has never seen these fields would erase them
 on its next push. Every edit to either list goes through `listStamp()`, which bumps that
@@ -207,23 +226,34 @@ change.
 ## Loading the owner's lists
 
 There is no paste box - the owner asked for it to go. Two ways in, both landing on the
-same functions (`importGroceries`, `importHabits`, and the meals handling in `applyAsk`):
+same functions (`importGroceries`, `importHabits`, `importWorkouts`, and the meals handling
+in `applyAsk`):
 matching rows update by name, new ones are added, nothing is deleted.
 
 - **The Tell it block** - see the next section.
 - **A one-time link.** `#i=` carries base64 JSON in the Tell it block shape
-  (`groceries`, `meals` with `slots`/`options`/`plan`, `habits`, `notes`). `loadLink()`
+  (`groceries`, `meals` with `slots`/`options`/`plan`, `habits`, `workouts`, `notes`). `loadLink()`
   applies it once on load, drops the hash so a reload can't apply it twice, and says what
   landed. With a link the meal `options` **replace** the starter set (`applyAsk(data,true)`),
   because the link carries the owner's whole list; a spoken change only ever adds. Claude
   builds the link from the owner's two Google Sheets ("Grocery List" and "Meal
-  Preperation" in Drive) and hands it over in chat - the data is never in the repo. Like
-  the habits in `DEFAULT`, `MEAL_SEED` stays generic.
+  Preperation" in Drive), and the workouts from "Fitness" (its Dashboard, Workouts,
+  Mobility and Exercise Library tabs), and hands it over in chat - the data is never in
+  the repo. Like the habits in `DEFAULT`, `MEAL_SEED` and `TRAIN_SEED` stay generic - the
+  owner's fitness tests, targets and results are personal and never go in this file.
+- **`workouts`** holds `tests`, `results` as `{test, date, result, note}`, `sessions`
+  (`{title, group, note, items:[{name, dose, cue, alt, part, test}]}`), `library` and
+  `done` (`{session, date, moves?}`, ticking a session's moves on a day - all of them when
+  `moves` is left out). Tests and library entries match by name, sessions by title,
+  results by test + date + value; a matched session takes the block's moves in order,
+  keeping ids by move name so the day's ticks survive. With a link, each kind the link
+  carries **replaces** what is here (the starter set included), reusing ids by name so
+  results stay attached; a spoken change only adds.
 
 ## Tell it and the Notion copy
 
 There is no AI tab. **The owner asked for that explicitly: the AI lives inside the tabs,
-not in a section of its own.** Each of Today, Meals and Groceries carries a one-line
+not in a section of its own.** Each of Today, Meals, Groceries and Workouts carries a one-line
 "Tell it" box (`tellBox`), shown only while a server is connected and not in edit mode.
 It talks to the **Routines Console**, a separate repo (`routines-console`) that
 runs on Vercel or any Node host (Railway: `npm start`). It runs an AI with Notion tools -
@@ -257,10 +287,11 @@ this file.
   Nothing is persisted; the old `routines.askLog` key is deleted on load. The last reply
   (`askLast`) shows under the box on whichever tab is open until Clear or the next send.
 - Each message carries `askContext()`: today's list with ticks, streaks, two weeks of
-  scores, the groceries needed by store, and this week's meal plan, computed with the same
+  scores, the groceries needed by store, this week's meal plan, this week's workout
+  sessions, and every fitness test with its best and status, computed with the same
   functions the tabs use. It opens with `askRules()`, which tells the model how to change
-  the app: when the person says what they want (a meal plan, a shopping list, a note from
-  the day), the reply carries one fenced ```` ```routines ```` block in the import shape plus
+  the app: when the person says what they want (a meal plan, a shopping list, a test
+  result, a session done, a note from the day), the reply carries one fenced ```` ```routines ```` block in the import shape plus
   `notes`. `takeAskBlock()` strips it from the shown reply and `applyAsk()` applies it -
   the import functions, except that meal options **merge** (a spoken change must never
   wipe the owner's lists) and a plan entry can `clear` a meal. `notes` append to
@@ -306,8 +337,10 @@ crimson (`#A31F34` light, `#FF3B4E` dark) — the single accent, used for checks
 the streak, and the mid-list quote. Keep it to one, and read it from `:root` rather than
 from this file, which has been wrong about it before.
 
-Meals and Groceries are built from Today's own parts - `.sec` cards, `.row` lines, `.box`
-ticks - so the tabs read as one app; only the week strip and meal tiles are new. A meal
+Meals, Groceries and Workouts are built from Today's own parts - `.sec` cards, `.row` lines,
+`.box` ticks - so the tabs read as one app; only the week strip, meal tiles, and the
+workouts' best-and-status column (`.tval`), part headings (`.tpart`) and result history
+(`.thist`) are new. A meal
 pick is a styled tile with a native `<select>` laid invisibly over it, so a phone opens its
 own picker. The stats view already owns `.tile`/`.tiles`; the meal tiles are `.mtile`.
 
