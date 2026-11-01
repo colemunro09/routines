@@ -3105,6 +3105,8 @@ function applyAsk(data,whole){
         have.push({name:name,type:String(o&&o.type||"").trim()}); names[name.toLowerCase()]=1; n++;
       });
     });
+    /* slots first, so a plan entry for a slot named in the same block lands */
+    if(Array.isArray(m.slots)&&m.slots.length){ state.meals.slots=dedupe(m.slots.map(String)); n++; did.push("Meal slots"); }
     if(Array.isArray(m.plan)) m.plan.forEach(function(e){
       var i=WEEKDAYS.map(function(d){ return d.toLowerCase(); }).indexOf(String(e.day||"").trim().toLowerCase());
       var slot=String(e.meal||"").trim(); if(i<0||!slot) return;
@@ -3130,7 +3132,6 @@ function applyAsk(data,whole){
       n++;
       did.push(WEEKDAYS[i].slice(0,3)+" "+slot.toLowerCase()+(e.clear?" cleared":" planned"));
     });
-    if(Array.isArray(m.slots)&&m.slots.length){ state.meals.slots=dedupe(m.slots.map(String)); n++; did.push("Meal slots"); }
     if(n){ state.meals.mtime=Date.now(); if(!did.length) did.push("Meal options"); }
   }
   if(Array.isArray(data.groceries)&&data.groceries.length){
