@@ -3061,7 +3061,7 @@ function askRules(){
     "```",
     "Rules: meal plan entries name a weekday and one of the meal slots; a field left out is kept as it is, \"\" clears it, clear:true clears the whole meal. "+
     "Prefer meal option names from the lists below; a new name is added as an option. New grocery items default to need:true; "+
-    "\"got it\" or \"don't need\" means need:false. Groceries match by name, so repeating one updates it. "+
+    "\"got it\" or \"don't need\" means need:false; \"take it off the list\" means remove:true. Groceries match by name, so repeating one updates it. "+
     "notes are appended to the scratch pad with today's date - use them for anything the person wants jotted down. "+
     "Workout results name a test exactly as listed below; times are m:ss or h:mm:ss, pass/fail tests take Pass or Fail, and the date defaults to today. "+
     "done ticks a session's moves on a day - leave out moves to tick the whole session, and never use a future day. Add a test only when asked to track a new one. "+
@@ -3135,7 +3135,17 @@ function applyAsk(data,whole){
     if(n){ state.meals.mtime=Date.now(); if(!did.length) did.push("Meal options"); }
   }
   if(Array.isArray(data.groceries)&&data.groceries.length){
-    var g=importGroceries(data.groceries.map(function(x){
+    /* remove:true takes an item off the list for good (and out of Notion, via the
+       tombstone); anything else is an add or an update by name */
+    var gone=0, keep=[];
+    data.groceries.forEach(function(x){
+      if(x&&typeof x==="object"&&x.remove===true){
+        var hit=findGrocery(String(x.name||""));
+        if(hit){ tombstone(hit.id); state.groceries.items.splice(state.groceries.items.indexOf(hit),1); gone++; }
+      } else keep.push(x);
+    });
+    if(gone){ state.groceries.mtime=Date.now(); groEpoch++; did.push(gone+" grocer"+(gone===1?"y":"ies")+" removed"); }
+    var g=importGroceries(keep.map(function(x){
       if(x&&typeof x==="object"){ if(x.need==null) x.need=true; return x; }
       return {name:x,need:true};
     }));
