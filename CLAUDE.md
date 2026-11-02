@@ -29,6 +29,12 @@ root. **Pushing to `main` deploys.** Redeploy takes about a minute.
   - `sw.js` — the offline shell, ~45 lines, no dependencies. It is registered only from a
     secure origin that isn't `file:`, so a local copy or an Artifact preview skips it and
     behaves exactly as the app did before it existed.
+  - `functions/api/key.js` — a Cloudflare Pages Function, used only when the app is hosted
+    on Cloudflare Pages behind Access (see README, "Hosting behind a sign-in"). It checks
+    the Access token and answers `POST /api/key` with `{url, key}` from the project's
+    variables. `autoConnect()` in the app calls it once at startup when the device has no
+    server config; anywhere else the call 404s or 503s and the app carries on as before.
+    POST on purpose: the service worker caches same-origin GETs.
 - **No `<!doctype>`, `<html>`, `<head>`, or `<body>` tags** — the file opens with `<title>`
   and the font `<link>`. It renders fine as a standalone page and stays publishable as a
   Claude Artifact. Meta tags for iOS standalone mode are injected by JS at startup.
@@ -359,7 +365,8 @@ transitions — don't add animation that ignores it.
 - **Hosting is GitHub Pages, not Supabase Storage.** Supabase has no static-site Git
   integration; its GitHub integration is for database migrations. Pages auto-deploys on push.
 - **The repo is public** because Pages on a private repo needs a paid GitHub plan, and the
-  source contains nothing sensitive.
+  source contains nothing sensitive. The owner can instead host on Cloudflare Pages behind
+  Access, which also builds a private repo; the app supports both at once.
 - **Local storage plus a JSON document** rather than a normalized schema. One user, tiny
   data, and it keeps the app fully functional with sync turned off.
 - **No login.** A long secret key is the whole auth model. This was a deliberate call by

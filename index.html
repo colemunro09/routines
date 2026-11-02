@@ -3746,6 +3746,21 @@ window.addEventListener("resize",function(){
 });
 
 markClean();
+/* Hosted behind a sign-in (Cloudflare Pages + Access): the page's own /api/key hands
+   over the server key to a browser that has signed in, so a device connects itself.
+   Anywhere else - GitHub Pages, a local copy, a preview - the call fails quietly and
+   the device waits for the key under Edit list -> Routines server, as before. */
+function autoConnect(){
+  if(askCfg||!window.isSecureContext||location.protocol!=="https:") return;
+  var base=location.pathname.replace(/[^\/]*$/,"");
+  fetch(base+"api/key",{method:"POST",credentials:"same-origin",headers:{"Accept":"application/json"}}).then(function(res){
+    if(res.status!==200) return null;
+    return res.json().catch(function(){ return null; });
+  }).then(function(d){
+    if(!d||typeof d.key!=="string"||!d.key||!/^https:\/\//.test(String(d.url||""))) return;
+    connectWith(d.url,d.key);
+  },function(){});
+}
 /* A one-time link: #i= carries base64 JSON in the Tell it block shape. Claude
    builds it from the owner's sheets so the lists arrive without a paste box.
    Applied once, then the hash is dropped so a reload can't apply it again. */
@@ -3765,6 +3780,7 @@ markClean();
 })();
 if(askCfg) cfg=serverCfg();
 else if(lsGet(ASKPEND)&&!cfg) setSync("off","Connect");
+autoConnect();
 if(cfg) setSync("busy","Syncing…");
 /* arrived on a setup link: the panel lives in edit mode, so say so on the chip -
    tapping it opens the panel, which is where the secret key gets pasted. */

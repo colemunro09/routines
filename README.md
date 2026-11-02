@@ -100,6 +100,35 @@ The newer edit wins for the list itself, but checkmarks merge day by day — so 
 checked off on your phone survives a laptop that has been open since yesterday. Offline,
 the app keeps working locally and catches up on the next open.
 
+## Hosting behind a sign-in (optional)
+
+GitHub Pages is public: anyone with the address sees the app, though never your data,
+which stays behind the server key. If you would rather the page itself ask for a Google
+sign-in, host it on **Cloudflare Pages** with **Cloudflare Access** in front. Then a
+device connects itself after the sign-in - no key to type - because `functions/api/key.js`
+runs on the same address as the page and hands the key to a browser Access has let in.
+
+1. **Cloudflare Pages.** Workers & Pages → Create → Pages → Connect to Git → this repo.
+   Build command: none. Output directory: `/`. Deploy. Note the address
+   (`something.pages.dev`, or add a domain you own).
+2. **Access.** Zero Trust → Access → Applications → Add → Self-hosted. Domain: the
+   address from step 1. Session duration: 1 month. Policy: Allow, Include → Emails →
+   your address. Login method: Google (set up once under Settings → Authentication; it
+   needs a Google OAuth client) or the built-in One-time PIN, which needs nothing. Save,
+   then open the application's Overview and copy its **Audience (AUD) tag**.
+3. **Variables** on the Pages project (Settings → Variables and Secrets, Production):
+   `ROUTINES_KEY` = your server key (encrypt it), `CF_ACCESS_TEAM_DOMAIN` = your team
+   name (the part before `.cloudflareaccess.com`), `CF_ACCESS_AUD` = the tag from step 2.
+   Redeploy once so the function sees them.
+4. **Railway.** Add the new address to the console's allowed origins (`ALLOWED_ORIGINS`),
+   so Tell it and the Notion sync accept calls from it.
+5. Open the new address, sign in with Google, and the chip reads Synced on its own.
+   Once that works you can turn GitHub Pages off and make the repo private; Cloudflare
+   Pages builds private repos too.
+
+Without those variables the function answers 503 and the app behaves exactly as on
+GitHub Pages: Local only, key typed once under Edit list → Routines server.
+
 ## Editing the UI
 
 Every color, radius, and shadow is a CSS custom property in the `:root` block at the top of
