@@ -121,7 +121,7 @@ runs on the same address as the page and hands the key to a browser Access has l
    name (the part before `.cloudflareaccess.com`), `CF_ACCESS_AUD` = the tag from step 2.
    Redeploy once so the function sees them.
 4. **Railway.** Add the new address to the console's allowed origins (`ALLOWED_ORIGINS`),
-   so Tell it and the Notion sync accept calls from it.
+   so Tell it accepts calls from it.
 5. Open the new address, sign in with Google, and the chip reads Synced on its own.
    Once that works you can turn GitHub Pages off and make the repo private; Cloudflare
    Pages builds private repos too.

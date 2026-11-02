@@ -41,7 +41,7 @@ root. **Pushing to `main` deploys.** Redeploy takes about a minute.
 - **The only external request is Google Fonts.** Anything else breaks the Artifact preview
   and adds a failure mode on a phone with bad signal. The two exceptions are both optional
   and silent until the person configures them on that device: Supabase sync and the
-  Routines Console (the Tell it box, and grocery sync with Notion).
+  Routines Console (the Tell it box).
 - ES5-flavored JS (`var`, `function`, no optional chaining). Not a hard requirement, but the
   file is consistent — match it.
 
@@ -63,7 +63,7 @@ URL, anon key, or secret key. None of those are in the repo today; keep it that 
 4. `<script>` — one IIFE, in this order: meta injection, storage helpers, `DEFAULT`,
    `LESSONS`, the list constants and `shapeLists`, state load and migration, sync config
    and transport, date helpers, icons, render functions, the meals/groceries/workouts UI,
-   the Tell it box and the Notion copy, `render()`, event wiring
+   the Tell it box, `render()`, event wiring
 
 The two quote slots are picked each civil day from `LESSONS` plus `quote` and
 `midQuote` on the document. Edit mode still edits those two personal lines; it
@@ -86,10 +86,8 @@ does not edit the standing questions.
     }
   },
   groceries: {
-    items: [ { id, name, group, store, note, need: true, got: false,
-               t: …,         // last edited here (ms)
-               s: … } ],     // last matched Notion (ms)
-    deleted: [ id ],         // deleted here, not yet sent to Notion
+    items: [ { id, name, group, store, note, need: true, got: false } ],
+    deleted: [ id ],         // left over from the old Notion sync; harmless, no longer written
     mtime: …                 // its own clock - see "Sync design"
   },
   meals: {
@@ -238,7 +236,7 @@ There is no paste box - the owner asked for it to go. Two ways in, both landing 
 same functions (`importGroceries`, `importHabits`, `importWorkouts`, and the meals handling
 in `applyAsk`):
 matching rows update by name, new ones are added, and nothing is deleted unless a grocery
-entry says `remove:true` - that one goes through `tombstone()` so Notion drops it too.
+entry says `remove:true`.
 
 - **The Tell it block** - see the next section.
 - **A one-time link.** `#i=` carries base64 JSON in the Tell it block shape
@@ -260,13 +258,13 @@ entry says `remove:true` - that one goes through `tombstone()` so Notion drops i
   carries **replaces** what is here (the starter set included), reusing ids by name so
   results stay attached; a spoken change only adds.
 
-## Tell it and the Notion copy
+## Tell it
 
 There is no AI tab. **The owner asked for that explicitly: the AI lives inside the tabs,
 not in a section of its own.** Each of Today, Meals, Groceries and Workouts carries a one-line
 "Tell it" box (`tellBox`), shown only while a server is connected and not in edit mode.
 It talks to the **Routines Console**, a separate repo (`routines-console`) that
-runs on Vercel or any Node host (Railway: `npm start`). It runs an AI with Notion tools -
+runs on Vercel or any Node host (Railway: `npm start`). It runs an AI with no tools -
 Claude when the server has a Claude key, otherwise OpenAI - and the app labels replies
 with whichever answered (`askWho`). The app never calls an AI itself, so no AI key is in
 this file.
@@ -308,23 +306,12 @@ this file.
   `scratch` with the day's date. What changed shows as chips on the reply (`did`). A plain
   question gets no block, and a block that doesn't parse leaves the reply as it came. The
   server needs nothing new for this; dictation is the keyboard mic.
-- With the console connected, groceries sync with a Notion database **both ways**:
-  four seconds after a change, about 3s after the app opens, and on returning to the
-  foreground (at most once a minute). The app sends its whole list with each item's `t`
-  and `s` plus `deleted`; the console reconciles item by item (`reconcile()` in the
-  console repo) and returns the merged list, which replaces the app's.
-  - Edited only here since `s`: the app wins. Changed only in Notion: Notion wins. Both:
-    the later edit wins; Notion stamps to the minute, so a same-minute tie goes to the app.
-  - A row made in Notion (no Routines ID) is claimed: given an id and added here.
-  - Deleted here: the id rides in `deleted` and only that row is trashed. An item missing
-    here but not in `deleted` - another device added it - comes back instead.
-  - Deleted in Notion: dropped here, unless it was edited here since `s`.
-  - Every grocery edit must go through `touched(item)` (sets `t`) and `listStamp`. A
-    deletion must call `tombstone(id)`. The in-cart tick passes `quiet` to `listStamp`:
-    Notion never holds it, so it needn't sync.
-  - `groEpoch` counts edits. A reply that arrives after an edit made mid-flight is
-    dropped and a fresh sync runs, so a sync can never undo a tap.
-- The console allows only `https://colemunro09.github.io` as an origin (`ALLOWED_ORIGINS`).
+- There is no Notion sync any more. **The owner asked for everything Notion to go**
+  (November 2026): the grocery list lives only in the document, the console has no Notion
+  tools, and its `/api/groceries` route is gone. Older documents may still carry `t`, `s`
+  and `deleted` on groceries; they are ignored. Don't bring the sync back unasked.
+- The console allows `https://colemunro09.github.io` and the Cloudflare Pages address as
+  origins (`ALLOWED_ORIGINS`).
 - The service worker ignores cross-origin requests and anything that isn't GET, so console
   traffic, which carries the key, never lands in the offline cache.
 

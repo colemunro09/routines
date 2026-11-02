@@ -612,10 +612,6 @@ details[open] summary .chev{transform:rotate(180deg)}
 .lempty p{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.55}
 .lpanel{border:1px solid var(--line-soft);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow)}
 .lpanel .dpad textarea{font-family:"IBM Plex Sans",sans-serif;font-size:15px;min-height:7.5em}
-.nsync{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.nsync .pane-sub{margin:0}
-.nsync .pane-sub.err{color:var(--danger)}
-.nsync .btn{padding:8px 12px;min-height:44px;font-size:12.5px}
 
 /* workouts: the same cards, rows and ticks again. New here: a session's note and its
    part headings, a test's best-and-status column, and the result history. */
@@ -2105,13 +2101,7 @@ function mkBtn(label,cls,onClick){
   b.addEventListener("click",onClick);
   return b;
 }
-var groEpoch=0;
-/* quiet: a change Notion doesn't hold (the in-cart tick), so no sync is needed */
-function listStamp(k,quiet){
-  state[k].mtime=Date.now(); save();
-  if(k==="groceries"&&!quiet){ groEpoch++; scheduleNotion(); }
-}
-function touched(it){ it.t=Date.now(); return it; }
+function listStamp(k){ state[k].mtime=Date.now(); save(); }
 /* Monday is 0, and "today" follows the civil day, so 1am Saturday is still Friday */
 function weekIdx(){ return (nowDay().getDay()+6)%7; }
 function weekStart(){ var d=nowDay(); d.setDate(d.getDate()-weekIdx()); return keyOf(d); }
@@ -2316,7 +2306,7 @@ function groRow(it){
   if(sub) tx.appendChild(mk("span","gsub",sub));
   row.appendChild(tx);
   function flip(){
-    it.need=!it.need; delete it.got; touched(it);
+    it.need=!it.need; delete it.got;
     buzz(); listStamp("groceries"); render();
   }
   row.addEventListener("click",flip);
@@ -2336,12 +2326,11 @@ function groEditor(it){
   row.appendChild(mkBtn("Save","primary",function(){
     var n=fName.input.value.trim(); if(!n) return;
     it.name=n; it.group=fGroup.input.value.trim(); it.store=fStore.input.value.trim(); it.note=fNote.input.value.trim();
-    touched(it); groEditing=null; listStamp("groceries"); render();
+    groEditing=null; listStamp("groceries"); render();
   }));
   row.appendChild(mkBtn("Delete","ghost danger",function(){
     if(!confirm("Delete "+it.name+" from your grocery list?")) return;
     state.groceries.items=state.groceries.items.filter(function(x){ return x!==it; });
-    tombstone(it.id);
     groEditing=null; listStamp("groceries"); render();
   }));
   pad.appendChild(row); box.appendChild(pad);
@@ -2382,13 +2371,6 @@ function renderGroceries(){
   t.appendChild(mk("h2",null,"Groceries"));
   t.appendChild(mk("div","pane-sub",need.length+" needed · "+items.length+" on your list"));
   head.appendChild(t); pane.appendChild(head);
-  if(askCfg){
-    var ns=mk("div","nsync"), nl=mk("div","pane-sub"); nl.id="notionState";
-    ns.appendChild(nl);
-    var sb=mk("button","linkbtn","Sync now"); sb.type="button"; sb.addEventListener("click",function(){ scheduleNotion(0); });
-    ns.appendChild(sb);
-    pane.appendChild(ns);
-  }
   var tellG=mk("div","tell"); tellBox(tellG,"Tell it","Say what to add\u2026"); pane.appendChild(tellG);
   pane.appendChild(datalist("dl_groups",items.map(function(it){ return it.group; })));
   pane.appendChild(datalist("dl_stores",allStores()));
@@ -2404,7 +2386,7 @@ function renderGroceries(){
     acts.appendChild(cp);
     acts.appendChild(mkBtn("Clear ticks","ghost",function(){
       if(!confirm("Untick all "+need.length+" needed items?")) return;
-      need.forEach(function(it){ it.need=false; delete it.got; touched(it); });
+      need.forEach(function(it){ it.need=false; delete it.got; });
       listStamp("groceries"); render();
     }));
     pane.appendChild(acts);
@@ -2425,8 +2407,8 @@ function renderGroceries(){
       e.preventDefault();
       var n=groFind.trim(); if(!n) return;
       var hit=findGrocery(n);
-      if(hit){ hit.need=true; touched(hit); }
-      else { hit=touched({id:uid(),name:n,group:"",store:"",note:"",need:true}); state.groceries.items.push(hit); groEditing=hit.id; }
+      if(hit) hit.need=true;
+      else { hit={id:uid(),name:n,group:"",store:"",note:"",need:true}; state.groceries.items.push(hit); groEditing=hit.id; }
       groFind=""; listStamp("groceries"); render();
     });
     pane.appendChild(find);
@@ -2846,9 +2828,8 @@ function importGroceries(list){
     if(g.store!=null) hit.store=String(g.store).trim();
     if(g.note!=null) hit.note=String(g.note).trim();
     if(g.need!=null) hit.need=g.need===true||truthy(g.need);
-    touched(hit);
   });
-  if(added||updated){ state.groceries.mtime=Date.now(); groEpoch++; }
+  if(added||updated) state.groceries.mtime=Date.now();
   return {added:added,updated:updated};
 }
 function importHabits(sections){
@@ -2960,7 +2941,7 @@ function importWorkouts(src,whole){
    One line on Today, Meals and Groceries where the person says what they want -
    "Monday dinner salmon and rice", "add eggs and spinach", "note I ran into Sam" -
    or asks a question. It goes to the Routines Console server (its own repo), which
-   answers with Claude and can read and write Notion. Off until connected, like
+   answers with Claude. Off until connected, like
    sync; the key lives only in this device's storage, never in the document or a
    setup link. Each message carries a plain-text snapshot of the tracker. What
    comes back into the app is a ```routines block (see applyAsk): the reply
@@ -3141,16 +3122,16 @@ function applyAsk(data,whole){
     if(n){ state.meals.mtime=Date.now(); if(!did.length) did.push("Meal options"); }
   }
   if(Array.isArray(data.groceries)&&data.groceries.length){
-    /* remove:true takes an item off the list for good (and out of Notion, via the
-       tombstone); anything else is an add or an update by name */
+    /* remove:true takes an item off the list for good; anything else is an add or
+       an update by name */
     var gone=0, keep=[];
     data.groceries.forEach(function(x){
       if(x&&typeof x==="object"&&x.remove===true){
         var hit=findGrocery(String(x.name||""));
-        if(hit){ tombstone(hit.id); state.groceries.items.splice(state.groceries.items.indexOf(hit),1); gone++; }
+        if(hit){ state.groceries.items.splice(state.groceries.items.indexOf(hit),1); gone++; }
       } else keep.push(x);
     });
-    if(gone){ state.groceries.mtime=Date.now(); groEpoch++; did.push(gone+" grocer"+(gone===1?"y":"ies")+" removed"); }
+    if(gone){ state.groceries.mtime=Date.now(); did.push(gone+" grocer"+(gone===1?"y":"ies")+" removed"); }
     var g=importGroceries(keep.map(function(x){
       if(x&&typeof x==="object"){ if(x.need==null) x.need=true; return x; }
       return {name:x,need:true};
@@ -3172,10 +3153,7 @@ function applyAsk(data,whole){
     state.scratch=cur;
     did.push(notes.length===1?"Noted":notes.length+" notes added");
   }
-  if(did.length){
-    save();
-    if(data.groceries) scheduleNotion();
-  }
+  if(did.length) save();
   return did;
 }
 
@@ -3185,10 +3163,6 @@ function noteWho(model){
   var m=String(model||"");
   lsSet("routines.askWho", /^claude/i.test(m)?"Claude":/^gpt|^o\d/i.test(m)?"ChatGPT":"Assistant");
 }
-var TOOL_NAMES={
-  notion_search:"Searched Notion", notion_list_rows:"Read a database", notion_read_page:"Read a page",
-  notion_create_page:"Added to Notion", notion_append_text:"Wrote in Notion"
-};
 function askTurn(text,trace,kind,did){
   var t=document.createElement("div");
   t.className="ask-turn"+(kind?" "+kind:"");
@@ -3199,7 +3173,7 @@ function askTurn(text,trace,kind,did){
     (trace||[]).forEach(function(c){
       var li=document.createElement("li");
       if(!c.ok) li.className="bad";
-      li.textContent=(TOOL_NAMES[c.tool]||c.tool.replace(/_/g," "))+(c.ok?"":" \u2014 failed");
+      li.textContent=c.tool.replace(/_/g," ")+(c.ok?"":" \u2014 failed");
       li.title=c.ok?(c.detail||""):(c.error||"");
       ul.appendChild(li);
     });
@@ -3337,14 +3311,14 @@ function connectWith(url,key){
   askCfg={url:url,key:key}; lsSet(ASKCFG,JSON.stringify(askCfg)); lsDel(ASKPEND);
   /* the server holds the Supabase details now; don't leave a copy on this device */
   lsDel(CFGKEY); lsDel(PENDKEY); pending=null;
-  askEditing=false; cfg=serverCfg(); cfg.join=true; render(); pull(); scheduleNotion(2500);
+  askEditing=false; cfg=serverCfg(); cfg.join=true; render(); pull();
 }
 
 function askSetup(host){
   var box=document.createElement("div"); box.className="ask-setup";
   var pad=document.createElement("div"); pad.className="dpad";
   var intro=document.createElement("p");
-  intro.textContent="Enter your server key once and this device remembers it. That syncs your list with your other devices, lets you tell each tab what to change, and keeps groceries in step with Notion.";
+  intro.textContent="Enter your server key once and this device remembers it. That syncs your list with your other devices and lets you tell each tab what to change.";
   pad.appendChild(intro);
   var fUrl=field("Server address", askCfg?askCfg.url:(lsGet(ASKPEND)||HOME_SERVER), "https://your-server.up.railway.app");
   var fKey=field("Server key", "", askCfg?"Saved. Paste a new one to replace it.":"The key you set as CONSOLE_SECRET");
@@ -3457,7 +3431,7 @@ function serverPanel(){
     return det;
   }
   var pad=mk("div","dpad");
-  pad.appendChild(mk("p",null,"Connected to "+askCfg.url.replace(/^https:\/\//,"")+". Your list syncs through it, the tell-it box on each tab uses it, and groceries stay in step with Notion."));
+  pad.appendChild(mk("p",null,"Connected to "+askCfg.url.replace(/^https:\/\//,"")+". Your list syncs through it and the tell-it box on each tab uses it."));
   var link=setupLink();
   pad.appendChild(mk("p","hint","To add another device, open this link there and type your server key once. The link never contains the key."));
   var ta=document.createElement("textarea"); ta.readOnly=true; ta.value=link; ta.setAttribute("aria-label","Setup link"); ta.rows=2;
@@ -3532,91 +3506,6 @@ function tellSend(text){
   }).then(function(){ askBusy=false; render(); });
 }
 
-/* ---------- groceries ⇄ Notion ----------
-   With the console connected, the grocery list and a Notion database stay in step both
-   ways. The app sends its whole list (each item with t, its last edit here, and s, when
-   it last matched Notion) plus the ids it deleted; the console reconciles item by item
-   and returns the merged list, which replaces this one. Runs a few seconds after a
-   change, when the app opens, and when it comes back to the foreground. The cart tick
-   (got) never leaves the device - it only means something mid-shop. */
-var notionSync={state:"",at:0,msg:""}, notionTimer=null, notionBusy=false, notionAgain=false, notionLast=0;
-function tombstone(id){
-  var d=state.groceries.deleted||(state.groceries.deleted=[]);
-  if(d.indexOf(id)<0) d.push(id);
-  if(d.length>300) d.splice(0,d.length-300);
-}
-function scheduleNotion(ms){
-  if(!askCfg) return;
-  clearTimeout(notionTimer);
-  notionTimer=setTimeout(syncNotion, ms==null?4000:ms);
-}
-/* on open and on return: at most once a minute, so flicking between apps costs nothing */
-function freshenNotion(){
-  if(askCfg&&!notionBusy&&Date.now()-notionLast>60000) scheduleNotion(1500);
-}
-function syncNotion(){
-  if(!askCfg) return;
-  if(notionBusy){ notionAgain=true; return; }
-  notionBusy=true; notionLast=Date.now(); notionSync={state:"busy",at:0,msg:""}; paintNotion();
-  var epoch=groEpoch, sentDeleted=(state.groceries.deleted||[]).slice();
-  var items=state.groceries.items.map(function(it){
-    var o={id:it.id,name:it.name,need:!!it.need,group:it.group||"",store:it.store||"",note:it.note||""};
-    if(it.t) o.t=it.t; if(it.s) o.s=it.s;
-    return o;
-  });
-  fetch(askCfg.url+"/api/groceries",{
-    method:"POST",
-    headers:{"Authorization":"Bearer "+askCfg.key,"Content-Type":"application/json"},
-    body:JSON.stringify({items:items,deleted:sentDeleted})
-  }).then(function(res){
-    return res.json().catch(function(){ return {}; }).then(function(d){ return {status:res.status,data:d||{}}; });
-  }).then(function(r){
-    if(r.status!==200||!Array.isArray(r.data.items)){
-      notionSync={state:"err",at:0,msg:r.data.error||("Notion sync failed ("+r.status+").")};
-      return;
-    }
-    notionSync={state:"ok",at:Date.now(),msg:""};
-    /* edited while this was in flight: the reply is already stale, so go again */
-    if(epoch!==groEpoch){ notionAgain=true; return; }
-    applyNotion(r.data.items, sentDeleted);
-  },function(){
-    notionSync={state:"err",at:0,msg:"Couldn't reach your Routines server, so Notion wasn't synced."};
-  }).then(function(){
-    notionBusy=false; paintNotion();
-    if(notionAgain){ notionAgain=false; syncNotion(); }
-  });
-}
-function applyNotion(items,sentDeleted){
-  var got={}, before=JSON.stringify(state.groceries.items);
-  state.groceries.items.forEach(function(it){ if(it.got) got[it.id]=1; });
-  state.groceries.items=items.map(function(x){
-    var it={id:x.id,name:x.name,group:x.group||"",store:x.store||"",note:x.note||"",need:!!x.need};
-    if(x.t) it.t=x.t; if(x.s) it.s=x.s;
-    if(got[it.id]&&it.need) it.got=true;
-    return it;
-  });
-  /* the deletes just sent are done; keep any made since */
-  state.groceries.deleted=(state.groceries.deleted||[]).filter(function(id){ return sentDeleted.indexOf(id)<0; });
-  /* stamp the list so other devices take it, but don't sync it straight back */
-  state.groceries.mtime=Date.now(); save();
-  if(JSON.stringify(state.groceries.items)!==before&&view==="groceries") render();
-}
-function notionLabel(){
-  if(notionSync.state==="busy") return "Syncing with Notion…";
-  if(notionSync.state==="err") return notionSync.msg;
-  if(notionSync.state==="ok"){
-    var m=Math.round((Date.now()-notionSync.at)/60000);
-    return "Synced with Notion "+(m<1?"just now":m+" min ago");
-  }
-  return "Syncs with Notion both ways";
-}
-function paintNotion(){
-  var el=document.getElementById("notionState");
-  if(!el) return;
-  el.textContent=notionLabel();
-  el.className="pane-sub"+(notionSync.state==="err"?" err":"");
-}
-
 function render(){
   if(drag) stopDrag(false);
   var onStats = view==="stats", onList = view==="list";
@@ -3638,7 +3527,7 @@ function render(){
   renderHeader();
   if(onStats){ renderStats(); return; }
   if(view==="meals"){ renderMeals(); return; }
-  if(view==="groceries"){ renderGroceries(); paintNotion(); return; }
+  if(view==="groceries"){ renderGroceries(); return; }
   if(view==="train"){ renderTrain(); return; }
   renderQuote(); renderSections(); renderDayNote();
   tellBox($("tellToday"),"Tell it","Note something, or ask\u2026");
@@ -3734,11 +3623,10 @@ setInterval(function(){
 },20000);
 document.addEventListener("visibilitychange",function(){
   if(document.hidden) return;
-  freshenNotion();
   var t=today(); if(t!==day) day=t;
   render(); pull();
 });
-window.addEventListener("focus",function(){ pull(); freshenNotion(); });
+window.addEventListener("focus",function(){ pull(); });
 window.addEventListener("resize",function(){
   var host=$("dayNote");
   if(!host||host.hidden) return;
@@ -3787,7 +3675,5 @@ if(cfg) setSync("busy","Syncing…");
 else if(pending) setSync("off","Finish setup");
 render();
 if(cfg) pull();
-/* after the Supabase pull has had a moment, so a fresh device syncs the merged list */
-if(askCfg) setTimeout(freshenNotion, 1500);
 })();
 </script>
