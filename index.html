@@ -2147,9 +2147,15 @@ function mealSelect(field,value,onChange){
   sel.addEventListener("change",function(){ onChange(sel.value); });
   return sel;
 }
+/* consistency for the week: of the meals actually planned, how many were eaten.
+   An empty slot (no picks) is not a meal missed, so it doesn't count. */
+function mealPlanned(c){ return MEAL_FIELDS.some(function(f){ return !!c[f.k]; }); }
 function mealCounts(){
   var done=0,total=0;
-  WEEKDAYS.forEach(function(d,i){ state.meals.slots.forEach(function(sl){ total++; if(mealAt(i,sl).done) done++; }); });
+  WEEKDAYS.forEach(function(d,i){ state.meals.slots.forEach(function(sl){
+    var c=mealAt(i,sl); if(!mealPlanned(c)) return;
+    total++; if(c.done) done++;
+  }); });
   return {done:done,total:total};
 }
 function mealOptionsPanel(){
@@ -2216,7 +2222,7 @@ function renderMeals(){
   var host=$("meals"); host.innerHTML="";
   var pane=mk("div","pane"), head=mk("div","pane-head"), t=mk("div"), c=mealCounts();
   t.appendChild(mk("h2",null,"Meal prep"));
-  t.appendChild(mk("div","pane-sub","Week of "+fmtDay(weekStart())+" · "+c.done+" / "+c.total+" prepped"));
+  t.appendChild(mk("div","pane-sub","Week of "+fmtDay(weekStart())+" · "+c.done+" / "+c.total+" eaten"));
   head.appendChild(t); pane.appendChild(head);
   var meter=mk("div","lmeter"), fill=mk("i"); fill.style.width=(c.total?c.done/c.total*100:0)+"%";
   meter.appendChild(fill); pane.appendChild(meter);
@@ -2229,7 +2235,7 @@ function renderMeals(){
     var dn=0; state.meals.slots.forEach(function(sl){ if(mealAt(i,sl).done) dn++; });
     var b=mk("button","dayb"+(i===mealDay?" on":"")+(i===ti?" today":"")); b.type="button";
     b.setAttribute("role","tab"); b.setAttribute("aria-selected",i===mealDay?"true":"false");
-    b.setAttribute("aria-label",name+(i===ti?", today":"")+", "+dn+" of "+state.meals.slots.length+" prepped");
+    b.setAttribute("aria-label",name+(i===ti?", today":"")+", "+dn+" of "+state.meals.slots.length+" eaten");
     b.appendChild(mk("span","dl",name.slice(0,3)));
     b.appendChild(mk("span","dn",String(dayDate(i).getDate())));
     var bar=mk("span","db"), bf=mk("i"); bf.style.width=(dn/state.meals.slots.length*100)+"%"; bar.appendChild(bf); b.appendChild(bar);
@@ -2251,7 +2257,7 @@ function renderMeals(){
     row.innerHTML='<span class="box">'+ICON.check+'</span><span class="label"></span><span class="hstreak"></span>';
     row.querySelector(".label").textContent=slot;
     row.querySelector(".hstreak").textContent=cell.done?"Prepped":"";
-    row.setAttribute("aria-label",slot+(cell.done?", prepped":", not prepped"));
+    row.setAttribute("aria-label",slot+(cell.done?", eaten":", not eaten"));
     row.addEventListener("click",function(){ setMeal(i,slot,"done",!mealAt(i,slot).done); buzz(); render(); });
     meal.appendChild(row);
     var tiles=mk("div","mtiles");
@@ -3009,7 +3015,7 @@ function askContext(){
   WEEKDAYS.forEach(function(d,i){
     var parts=state.meals.slots.map(function(sl){
       var c=mealAt(i,sl), picks=MEAL_FIELDS.map(function(f){ return c[f.k]; }).filter(Boolean);
-      return picks.length? sl+": "+picks.join(", ")+(c.done?" (prepped)":"") : "";
+      return picks.length? sl+": "+picks.join(", ")+(c.done?" (eaten)":"") : "";
     }).filter(Boolean);
     if(parts.length) lines.push("- "+d+(i===weekIdx()?" (today)":"")+": "+parts.join("; "));
   });
