@@ -106,9 +106,12 @@ does not edit the standing questions.
 ```
 
 `groceries`, `meals` and `train` are standing lists: nothing in them touches `log` or the
-streaks. `store` may list several shops comma-separated; the Shop view
-files an item under the first and shows the rest as "also …". `got` is the in-cart tick
-while shopping; Finish shopping turns `need` off for everything got. New week clears `done`
+streaks. Groceries is **one list**, every item you buy grouped by food group, ticked
+when you need it - the owner asked for the old List/Shop split to go. "Copy N needed"
+puts the ticked items on the clipboard by store (`neededText`); `store` may list several
+shops comma-separated and the copy files an item under the first with the rest as
+"also …". "Clear ticks" unticks everything. `got` is a leftover from the Shop view, kept
+in the data so older copies merge cleanly but no longer set. New week clears `done`
 and `note` in the meal plan and keeps the choices.
 
 In `train`, `min` and `target` are stored bare ("12:00", not "≤ 12:00"); `better` gives the

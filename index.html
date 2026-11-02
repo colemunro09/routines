@@ -2092,7 +2092,7 @@ function renderNote(){
 }
 
 /* ---------- lists: UI ---------- */
-var shopMode=false, groEditing=null, mealOptsOpen=false;
+var groEditing=null, mealOptsOpen=false;
 
 function mk(tag,cls,text){
   var n=document.createElement(tag);
@@ -2305,30 +2305,25 @@ function allStores(){
   return out;
 }
 var groFind="";
-function groRow(it,mode){
-  var on = mode==="shop" ? !!it.got : !!it.need;
-  var row=mk("div","row gi"+(mode==="shop"?"":" keep"));
+function groRow(it){
+  var on=!!it.need;
+  var row=mk("div","row gi keep");
   row.setAttribute("role","checkbox"); row.setAttribute("aria-checked",on?"true":"false");
   row.setAttribute("aria-pressed",on?"true":"false"); row.tabIndex=0;
   row.innerHTML='<span class="box">'+ICON.check+'</span>';
   var tx=mk("span","gtext"); tx.appendChild(mk("span","label",it.name));
-  var also=String(it.store||"").split(",").slice(1).map(function(x){ return x.trim(); }).filter(Boolean).join(", ");
-  var bits = mode==="shop" ? [also?"also "+also:"", it.note] : [it.store, it.note];
-  var sub=bits.filter(Boolean).join(" · ");
+  var sub=[it.store, it.note].filter(Boolean).join(" · ");
   if(sub) tx.appendChild(mk("span","gsub",sub));
   row.appendChild(tx);
   function flip(){
-    if(mode==="shop"){ it.got=!it.got; buzz(); listStamp("groceries",true); render(); return; }
-    it.need=!it.need; if(!it.need) delete it.got; touched(it);
+    it.need=!it.need; delete it.got; touched(it);
     buzz(); listStamp("groceries"); render();
   }
   row.addEventListener("click",flip);
   row.addEventListener("keydown",function(e){ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); flip(); } });
-  if(mode!=="shop"){
-    var ed=mk("button","ed"); ed.type="button"; ed.innerHTML=ICON.edit; ed.setAttribute("aria-label","Edit "+it.name);
-    ed.addEventListener("click",function(e){ e.stopPropagation(); groEditing = groEditing===it.id ? null : it.id; render(); });
-    row.appendChild(ed);
-  }
+  var ed=mk("button","ed"); ed.type="button"; ed.innerHTML=ICON.edit; ed.setAttribute("aria-label","Edit "+it.name);
+  ed.addEventListener("click",function(e){ e.stopPropagation(); groEditing = groEditing===it.id ? null : it.id; render(); });
+  row.appendChild(ed);
   return row;
 }
 function groEditor(it){
@@ -2352,19 +2347,33 @@ function groEditor(it){
   pad.appendChild(row); box.appendChild(pad);
   return box;
 }
-function groCard(title,count,items,mode){
+function groCard(title,count,items){
   var card=mk("div","sec"), sh=mk("div","sec-head");
-  sh.innerHTML=ICON[mode==="shop"?"cart":"bag"];
+  sh.innerHTML=ICON.bag;
   sh.appendChild(mk("span","sec-title",title));
   sh.appendChild(mk("span","sec-count",count));
   card.appendChild(sh);
   var rows=mk("div","rows");
   items.forEach(function(it){
-    rows.appendChild(groRow(it,mode));
-    if(mode!=="shop"&&groEditing===it.id) rows.appendChild(groEditor(it));
+    rows.appendChild(groRow(it));
+    if(groEditing===it.id) rows.appendChild(groEditor(it));
   });
   card.appendChild(rows);
   return card;
+}
+/* What's ticked, as plain text by store - for pasting into a message or a notes app. */
+function neededText(){
+  var need=state.groceries.items.filter(function(it){ return it.need; }), lines=[];
+  groupBy(need,firstStore).forEach(function(g){
+    lines.push(g.name);
+    g.items.forEach(function(it){
+      var also=String(it.store||"").split(",").slice(1).map(function(x){ return x.trim(); }).filter(Boolean).join(", ");
+      var bits=[it.note, also?"also "+also:""].filter(Boolean).join(", ");
+      lines.push("- "+it.name+(bits?" ("+bits+")":""));
+    });
+    lines.push("");
+  });
+  return lines.join("\n").trim();
 }
 function renderGroceries(){
   var host=$("groceries"); host.innerHTML="";
@@ -2384,32 +2393,23 @@ function renderGroceries(){
   pane.appendChild(datalist("dl_groups",items.map(function(it){ return it.group; })));
   pane.appendChild(datalist("dl_stores",allStores()));
 
-  var seg=mk("div","seg");
-  [["List",false],["Shop",true]].forEach(function(o){
-    var b=mk("button",shopMode===o[1]?"on":null,o[0]); b.type="button";
-    if(o[1]&&need.length) b.appendChild(mk("span","ct",String(need.length)));
-    b.setAttribute("aria-pressed",shopMode===o[1]?"true":"false");
-    b.addEventListener("click",function(){ shopMode=o[1]; groEditing=null; groFind=""; render(); window.scrollTo(0,0); });
-    seg.appendChild(b);
-  });
-  pane.appendChild(seg);
-
-  if(shopMode){
-    if(!need.length){
-      var e1=mk("div","sec"), ep=mk("div","lempty");
-      ep.appendChild(mk("p",null,"Nothing on the list. Switch to List and tap what you need."));
-      e1.appendChild(ep); pane.appendChild(e1);
-    }
-    groupBy(need,firstStore).forEach(function(g){
-      var got=g.items.filter(function(it){ return it.got; }).length;
-      pane.appendChild(groCard(g.name,got+"/"+g.items.length,g.items,"shop"));
+  /* everything you buy, ticked when you need it; the ticked ones copy out by store */
+  if(need.length){
+    var acts=mk("div","row2");
+    var cp=mkBtn("Copy "+need.length+" needed","primary",function(){
+      var ta=document.createElement("textarea"); ta.value=neededText(); ta.setAttribute("aria-hidden","true");
+      ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta);
+      copy(ta,cp,"Copy "+need.length+" needed"); setTimeout(function(){ ta.remove(); },1600);
     });
-    var gotAll=need.filter(function(it){ return it.got; });
-    if(gotAll.length) pane.appendChild(mkBtn("Finish shopping · clear "+gotAll.length+" bought","primary",function(){
-      gotAll.forEach(function(it){ it.need=false; delete it.got; touched(it); });
+    acts.appendChild(cp);
+    acts.appendChild(mkBtn("Clear ticks","ghost",function(){
+      if(!confirm("Untick all "+need.length+" needed items?")) return;
+      need.forEach(function(it){ it.need=false; delete it.got; touched(it); });
       listStamp("groceries"); render();
     }));
-  } else {
+    pane.appendChild(acts);
+  }
+  {
     /* one box finds and adds: type to filter, and if nothing matches exactly, Add makes it */
     var find=mk("form","find"), fin=document.createElement("input");
     fin.placeholder="Find or add an item"; fin.value=groFind; fin.setAttribute("aria-label","Find or add an item");
@@ -2444,7 +2444,7 @@ function renderGroceries(){
     }
     groupBy(shown,function(it){ return it.group||"Other"; }).forEach(function(g){
       var n=g.items.filter(function(it){ return it.need; }).length;
-      pane.appendChild(groCard(g.name,n?n+" needed":"",g.items,"list"));
+      pane.appendChild(groCard(g.name,n?n+" needed":"",g.items));
     });
   }
   host.appendChild(pane);
