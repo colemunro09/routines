@@ -2232,7 +2232,7 @@ function renderMeals(){
   var ti=weekIdx(), strip=mk("div","days");
   strip.setAttribute("role","tablist"); strip.setAttribute("aria-label","Day of the week");
   WEEKDAYS.forEach(function(name,i){
-    var dn=0; state.meals.slots.forEach(function(sl){ if(mealAt(i,sl).done) dn++; });
+    var dn=0, dp=0; state.meals.slots.forEach(function(sl){ var c=mealAt(i,sl); if(!mealPlanned(c)) return; dp++; if(c.done) dn++; });
     var b=mk("button","dayb"+(i===mealDay?" on":"")+(i===ti?" today":"")); b.type="button";
     b.setAttribute("role","tab"); b.setAttribute("aria-selected",i===mealDay?"true":"false");
     b.setAttribute("aria-label",name+(i===ti?", today":"")+", "+dn+" of "+state.meals.slots.length+" eaten");
@@ -2245,10 +2245,10 @@ function renderMeals(){
   pane.appendChild(strip);
 
   var i=mealDay, name=WEEKDAYS[i], card=mk("div","sec"), sh=mk("div","sec-head");
-  var dn=0; state.meals.slots.forEach(function(sl){ if(mealAt(i,sl).done) dn++; });
+  var dn=0, dp=0; state.meals.slots.forEach(function(sl){ var c=mealAt(i,sl); if(!mealPlanned(c)) return; dp++; if(c.done) dn++; });
   sh.innerHTML=mealIcon();
   sh.appendChild(mk("span","sec-title",name+(i===ti?" · today":"")));
-  sh.appendChild(mk("span","sec-count",dn+"/"+state.meals.slots.length));
+  sh.appendChild(mk("span","sec-count",dn+"/"+dp));
   card.appendChild(sh);
   state.meals.slots.forEach(function(slot){
     var cell=mealAt(i,slot), meal=mk("div","meal");
@@ -2256,7 +2256,7 @@ function renderMeals(){
     row.setAttribute("aria-pressed",cell.done?"true":"false");
     row.innerHTML='<span class="box">'+ICON.check+'</span><span class="label"></span><span class="hstreak"></span>';
     row.querySelector(".label").textContent=slot;
-    row.querySelector(".hstreak").textContent=cell.done?"Prepped":"";
+    row.querySelector(".hstreak").textContent=cell.done?"Eaten":"";
     row.setAttribute("aria-label",slot+(cell.done?", eaten":", not eaten"));
     row.addEventListener("click",function(){ setMeal(i,slot,"done",!mealAt(i,slot).done); buzz(); render(); });
     meal.appendChild(row);
@@ -2276,7 +2276,7 @@ function renderMeals(){
   ob.addEventListener("click",function(){ mealOptsOpen=!mealOptsOpen; render(); if(mealOptsOpen) window.scrollTo(0,0); });
   var nb=mk("button","linkbtn","Start a new week"); nb.type="button";
   nb.addEventListener("click",function(){
-    if(!confirm("Start a new week? Prepped ticks and notes clear. Your meal choices stay.")) return;
+    if(!confirm("Start a new week? Eaten ticks and notes clear. Your meal choices stay.")) return;
     Object.keys(state.meals.plan).forEach(function(k){
       var cl=state.meals.plan[k]; delete cl.done; delete cl.note;
       if(!Object.keys(cl).length) delete state.meals.plan[k];
