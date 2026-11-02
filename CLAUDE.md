@@ -228,7 +228,8 @@ change.
 There is no paste box - the owner asked for it to go. Two ways in, both landing on the
 same functions (`importGroceries`, `importHabits`, `importWorkouts`, and the meals handling
 in `applyAsk`):
-matching rows update by name, new ones are added, nothing is deleted.
+matching rows update by name, new ones are added, and nothing is deleted unless a grocery
+entry says `remove:true` - that one goes through `tombstone()` so Notion drops it too.
 
 - **The Tell it block** - see the next section.
 - **A one-time link.** `#i=` carries base64 JSON in the Tell it block shape
