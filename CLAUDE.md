@@ -86,7 +86,7 @@ does not edit the standing questions.
     }
   },
   groceries: {
-    items: [ { id, name, group, store, note, need: true, got: false } ],
+    items: [ { id, name, qty, group, store, note, need: true, got: false } ],   // qty: how many, as text ("6")
     deleted: [ id ],         // left over from the old Notion sync; harmless, no longer written
     mtime: …                 // its own clock - see "Sync design"
   },
@@ -114,7 +114,8 @@ streaks. Groceries is **one list**, every item you buy grouped by food group, ti
 when you need it - the owner asked for the old List/Shop split to go. "Copy N needed"
 puts the ticked items on the clipboard by store (`neededText`); `store` may list several
 shops comma-separated and the copy files an item under the first with the rest as
-"also …". "Clear ticks" unticks everything. `got` is a leftover from the Shop view, kept
+"also …", and a `qty` shows as "× 6". `shapeLists` moves a note that is only a number into `qty`
+once (the field came later). "Clear ticks" unticks everything. `got` is a leftover from the Shop view, kept
 in the data so older copies merge cleanly but no longer set. New week clears `done`
 and `note` in the meal plan and keeps the choices.
 

@@ -902,6 +902,11 @@ function seedTrain(){
 function shapeLists(doc){
   if(!doc) return doc;
   if(!doc.groceries||!Array.isArray(doc.groceries.items)) doc.groceries={items:[],mtime:0};
+  /* qty arrived after note; a note that is only a number was a quantity all along */
+  doc.groceries.items.forEach(function(it){
+    if(it.qty==null) it.qty="";
+    if(!it.qty&&/^\d+([.,]\d+)?$/.test(String(it.note||"").trim())){ it.qty=String(it.note).trim(); it.note=""; }
+  });
   if(!doc.meals||typeof doc.meals!=="object") doc.meals={slots:null,options:null,plan:{},mtime:0};
   var m=doc.meals;
   if(!Array.isArray(m.slots)||!m.slots.length) m.slots=["Breakfast","Lunch","Dinner"];
@@ -2302,7 +2307,7 @@ function groRow(it){
   row.setAttribute("aria-pressed",on?"true":"false"); row.tabIndex=0;
   row.innerHTML='<span class="box">'+ICON.check+'</span>';
   var tx=mk("span","gtext"); tx.appendChild(mk("span","label",it.name));
-  var sub=[it.store, it.note].filter(Boolean).join(" · ");
+  var sub=[it.qty?"\u00d7 "+it.qty:"", it.store, it.note].filter(Boolean).join(" \u00b7 ");
   if(sub) tx.appendChild(mk("span","gsub",sub));
   row.appendChild(tx);
   function flip(){
@@ -2318,14 +2323,15 @@ function groRow(it){
 }
 function groEditor(it){
   var box=mk("div","gedit"), pad=mk("div","dpad");
-  var fName=field("Item",it.name,""), fGroup=field("Food group",it.group,"Fruits & Vegetables"),
-      fStore=field("Store",it.store,"One store, or several with commas"), fNote=field("Note",it.note,"Quantity, brand, code");
+  var fName=field("Item",it.name,""), fQty=field("How many",it.qty,"6"), fGroup=field("Food group",it.group,"Fruits & Vegetables"),
+      fStore=field("Store",it.store,"One store, or several with commas"), fNote=field("Note",it.note,"Brand, code");
+  fQty.input.inputMode="decimal"; fQty.input.setAttribute("aria-label","How many");
   fGroup.input.setAttribute("list","dl_groups"); fStore.input.setAttribute("list","dl_stores");
-  [fName,fGroup,fStore,fNote].forEach(function(f){ f.input.autocapitalize="sentences"; pad.appendChild(f); });
+  [fName,fQty,fGroup,fStore,fNote].forEach(function(f){ f.input.autocapitalize="sentences"; pad.appendChild(f); });
   var row=mk("div","row2");
   row.appendChild(mkBtn("Save","primary",function(){
     var n=fName.input.value.trim(); if(!n) return;
-    it.name=n; it.group=fGroup.input.value.trim(); it.store=fStore.input.value.trim(); it.note=fNote.input.value.trim();
+    it.name=n; it.qty=fQty.input.value.trim(); it.group=fGroup.input.value.trim(); it.store=fStore.input.value.trim(); it.note=fNote.input.value.trim();
     groEditing=null; listStamp("groceries"); render();
   }));
   row.appendChild(mkBtn("Delete","ghost danger",function(){
@@ -2358,7 +2364,7 @@ function neededText(){
     g.items.forEach(function(it){
       var also=String(it.store||"").split(",").slice(1).map(function(x){ return x.trim(); }).filter(Boolean).join(", ");
       var bits=[it.note, also?"also "+also:""].filter(Boolean).join(", ");
-      lines.push("- "+it.name+(bits?" ("+bits+")":""));
+      lines.push("- "+it.name+(it.qty?" \u00d7 "+it.qty:"")+(bits?" ("+bits+")":""));
     });
     lines.push("");
   });
@@ -2408,7 +2414,7 @@ function renderGroceries(){
       var n=groFind.trim(); if(!n) return;
       var hit=findGrocery(n);
       if(hit) hit.need=true;
-      else { hit={id:uid(),name:n,group:"",store:"",note:"",need:true}; state.groceries.items.push(hit); groEditing=hit.id; }
+      else { hit={id:uid(),name:n,qty:"",group:"",store:"",note:"",need:true}; state.groceries.items.push(hit); groEditing=hit.id; }
       groFind=""; listStamp("groceries"); render();
     });
     pane.appendChild(find);
@@ -2822,8 +2828,9 @@ function importGroceries(list){
   list.forEach(function(g){
     var name=String(g.name||"").trim(); if(!name) return;
     var hit=findGrocery(name);
-    if(!hit){ hit={id:uid(),name:name,group:"",store:"",note:"",need:false}; state.groceries.items.push(hit); added++; }
+    if(!hit){ hit={id:uid(),name:name,qty:"",group:"",store:"",note:"",need:false}; state.groceries.items.push(hit); added++; }
     else updated++;
+    if(g.qty!=null) hit.qty=String(g.qty).trim();
     if(g.group!=null) hit.group=String(g.group).trim();
     if(g.store!=null) hit.store=String(g.store).trim();
     if(g.note!=null) hit.note=String(g.note).trim();
@@ -2989,7 +2996,7 @@ function askContext(){
   lines.push("");
   lines.push("Groceries needed: "+(need.length?need.length:"none")+".");
   groupBy(need,firstStore).forEach(function(g){
-    lines.push("- "+g.name+": "+g.items.map(function(it){ return it.name+(it.note?" ("+it.note+")":""); }).join(", "));
+    lines.push("- "+g.name+": "+g.items.map(function(it){ return it.name+(it.qty?" \u00d7 "+it.qty:"")+(it.note?" ("+it.note+")":""); }).join(", "));
   });
   lines.push("");
   lines.push("Meal plan, week of "+weekStart()+":");
@@ -3039,7 +3046,7 @@ function askRules(){
     "```routines",
     '{"meals":{"plan":[{"day":"Monday","meal":"Dinner","main":"Salmon","side":"Rice","fruit":"","drink":"Water","note":"","clear":false}],'+
     '"options":{"main":[{"name":"Salmon","type":"Fish"}]},"slots":["Breakfast","Lunch","Dinner"]},'+
-    '"groceries":[{"name":"Eggs","need":true,"store":"Costco","group":"Dairy","note":"2 dozen"}],'+
+    '"groceries":[{"name":"Eggs","need":true,"qty":"2","store":"Costco","group":"Dairy","note":"large"}],'+
     '"habits":[{"title":"Morning","items":["Stretch"]}],'+
     '"workouts":{"results":[{"test":"Push-ups (max)","date":"'+day+'","result":"42","note":""}],'+
     '"done":[{"session":"Full body","date":"'+day+'","moves":["Squat"]}],'+
@@ -3049,6 +3056,7 @@ function askRules(){
     "Rules: meal plan entries name a weekday and one of the meal slots; a field left out is kept as it is, \"\" clears it, clear:true clears the whole meal. "+
     "Prefer meal option names from the lists below; a new name is added as an option. New grocery items default to need:true; "+
     "\"got it\" or \"don't need\" means need:false; \"take it off the list\" means remove:true. Groceries match by name, so repeating one updates it. "+
+    "qty is how many to get, as a number in a string (\"6 oranges\" is name Oranges, qty 6); \"\" clears it. note is for brand or a code, not a count. "+
     "notes are appended to the scratch pad with today's date - use them for anything the person wants jotted down. "+
     "Workout results name a test exactly as listed below; times are m:ss or h:mm:ss, pass/fail tests take Pass or Fail, and the date defaults to today. "+
     "done ticks a session's moves on a day - leave out moves to tick the whole session, and never use a future day. Add a test only when asked to track a new one. "+
