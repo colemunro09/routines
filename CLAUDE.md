@@ -102,7 +102,8 @@ does not edit the standing questions.
     sessions: [ { id, title, group, note,
                   items: [ { id, name, dose, cue, alt, part, test } ] } ],  // test = a test's name
     library: [ { id, name, dose, cue, carry, group, star } ],
-    days: { "2026-10-27": { sessionId: { itemId: 1 } } },   // session ticks, by civil day
+    runs: [ { id, date: "2026-10-27", dist, time, speed, incline, note } ],   // all as typed
+    days: { "2026-10-27": { sessionId: { itemId: 1 | { sets: [ { w, r } ] } } } },   // session ticks, by civil day
     mtime: …
   },
   mtime: 1755993600000                        // last local edit, drives sync merge
@@ -124,7 +125,13 @@ direction and the ≥/≤ is added on display. Best and Status are never stored 
 worked out from `results` every render (`testBest`, `testStatus`), so deleting a result
 fixes them. `testNum()` reads "12:30"/"1:15:00" as seconds and Pass/Fail as 1/0. Session
 ticks file under the civil day (`trainKey()`), and the week strip only reaches back to
-Monday and never past today. A session move with `test` gets a Log button that opens
+Monday and never past today. A tick is `1`, or `{sets:[{w,r}]}` once the weight and reps
+behind it are logged (the Sets button on a move; `setsFromDose` prefills "3 × 8" as three
+rows of 8, and last time's numbers are the placeholders). Every reader only asks whether
+the tick is truthy, so the two shapes mix freely in one day. Runs are their own log,
+`train.runs`, one entry per run with distance, time, speed and incline kept as typed
+(treadmills show whatever units they like); any day can carry one, with or without a
+session, and `trainedOn` counts it as a training day. A session move with `test` gets a Log button that opens
 that test's editor. The four-item `TRAIN_SEED` is generic and only fills an empty
 document; a `#i=` link carrying workouts replaces it.
 
@@ -251,9 +258,11 @@ entry says `remove:true`.
   the repo. Like the habits in `DEFAULT`, `MEAL_SEED` and `TRAIN_SEED` stay generic - the
   owner's fitness tests, targets and results are personal and never go in this file.
 - **`workouts`** holds `tests`, `results` as `{test, date, result, note}`, `sessions`
-  (`{title, group, note, items:[{name, dose, cue, alt, part, test}]}`), `library` and
+  (`{title, group, note, items:[{name, dose, cue, alt, part, test}]}`), `library`,
   `done` (`{session, date, moves?}`, ticking a session's moves on a day - all of them when
-  `moves` is left out). Tests and library entries match by name, sessions by title,
+  `moves` is left out; a move is a name or `{name, sets:[{weight, reps}]}`) and `runs`
+  (`{date, dist, time, speed, incline, note}`, matched by day and fields so a repeat
+  doesn't double). Tests and library entries match by name, sessions by title,
   results by test + date + value; a matched session takes the block's moves in order,
   keeping ids by move name so the day's ticks survive. With a link, each kind the link
   carries **replaces** what is here (the starter set included), reusing ids by name so

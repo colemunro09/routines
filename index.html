@@ -648,6 +648,14 @@ details[open] summary .chev{transform:rotate(180deg)}
 .thist .hn{flex:1;min-width:0;color:var(--ink-2);font-size:13px;overflow-wrap:anywhere}
 .thist .mini{width:44px;height:44px;margin-right:-10px}
 .gedit .dpad select{font-family:inherit;font-size:16px}
+/* sets logged on a move: "60 × 8, 60 × 8, 65 × 6" under its name, and the set editor */
+.gsets{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;color:var(--accent);font-variant-numeric:tabular-nums}
+.setrow{display:flex;align-items:center;gap:8px}
+.setrow .sn{flex:none;width:22px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.setrow input{flex:1;min-width:0}
+.setrow .sx{flex:none;color:var(--ink-3);font-size:13px}
+.setrow .mini{flex:none;width:44px;height:44px;margin-right:-10px}
+.runline{display:flex;flex-wrap:wrap;gap:4px 10px}
 .gedit details{background:var(--surface)}
 /* Ask: questions to the Routines Console server. Same surfaces and type as the list. */
 .tell{display:flex;flex-direction:column;gap:8px;margin:14px 0 6px}
@@ -894,7 +902,7 @@ function seedTrain(){
               items:s.items.map(function(x){ return {id:uid(),name:x[0],dose:x[1]}; })};
     }),
     library:TRAIN_SEED.library.map(function(x){ return {id:uid(),name:x[0],dose:x[1],cue:x[2],group:x[3]}; }),
-    days:{}, mtime:0
+    runs:[], days:{}, mtime:0
   };
 }
 /* Fill in whatever a document is missing. Run on local state only - never on a
@@ -915,7 +923,7 @@ function shapeLists(doc){
   if(!m.plan||typeof m.plan!=="object") m.plan={};
   if(!doc.train||typeof doc.train!=="object") doc.train=seedTrain();
   var w=doc.train;
-  ["tests","results","sessions","library"].forEach(function(k){ if(!Array.isArray(w[k])) w[k]=[]; });
+  ["tests","results","sessions","library","runs"].forEach(function(k){ if(!Array.isArray(w[k])) w[k]=[]; });
   if(!w.days||typeof w.days!=="object") w.days={};
   return doc;
 }
@@ -2447,10 +2455,14 @@ function findGrocery(name){
    Tests are benchmarks with an official minimum and your own target; results are the
    log behind them, and Best and Status are always worked out from that log, never
    stored. Sessions are ready-made routines ticked through on a day: the ticks file
-   under the civil day in train.days, so the week strip shows which days you trained. */
+   under the civil day in train.days, so the week strip shows which days you trained. A
+   tick is 1, or {sets:[{w,r}]} when the sets behind it were logged (w weight, r reps,
+   both as typed) - every reader only asks whether it is truthy. Runs are their own
+   log (train.runs), one entry per run with distance, time, speed and incline as text,
+   since a treadmill shows whatever units it likes; a run makes a training day too. */
 var TRAIN_SEGS=[["sessions","Sessions"],["tests","Tests"],["library","Library"]];
 var TEST_STATUS={target:"At target",meets:"Meets standard",below:"Below standard",short:"Short of target",logged:"Logged",none:"Not tested"};
-var trainSeg="sessions", trainSess=null, trainDay=null, testEditing=null, libFind="";
+var trainSeg="sessions", trainSess=null, trainDay=null, testEditing=null, libFind="", moveEditing=null, runEditing=null;
 
 /* "12:30" and "1:15:00" are seconds, "Pass" is 1 and "Fail" 0, anything else its first number */
 function testNum(v){
@@ -2514,7 +2526,40 @@ function trainKey(){
 function ticksOn(k,sid){ var d=state.train.days[k]; return (d&&d[sid])||{}; }
 function trainedOn(k){
   var d=state.train.days[k];
-  return d? state.train.sessions.filter(function(s){ return d[s.id]; }).length : 0;
+  return (d? state.train.sessions.filter(function(s){ return d[s.id]; }).length : 0)+runsOn(k).length;
+}
+function runsOn(k){ return state.train.runs.filter(function(r){ return r.date===k; }); }
+/* the sets behind a tick, if any were logged */
+function setsOf(tick){ return tick&&typeof tick==="object"&&Array.isArray(tick.sets)? tick.sets : []; }
+function setsText(sets){
+  return sets.map(function(x){
+    var w=String(x.w||"").trim(), r=String(x.r||"").trim();
+    return w&&r? w+" \u00d7 "+r : w||r;
+  }).filter(Boolean).join(", ");
+}
+/* the last day before k on which this move had sets logged: {date, sets} or null */
+function lastSets(sid,iid,k){
+  var days=state.train.days, best=null;
+  Object.keys(days).forEach(function(d){
+    if(d>=k||!days[d][sid]) return;
+    var sets=setsOf(days[d][sid][iid]);
+    if(sets.length&&(!best||d>best.date)) best={date:d,sets:sets};
+  });
+  return best;
+}
+/* "3 × 8" as a prescription gives 3 empty rows of 8; anything else one empty row */
+function setsFromDose(dose){
+  var m=/^\s*(\d+)\s*[x\u00d7*]\s*(\d+)/i.exec(dose||""), out=[], i;
+  var n=m? Math.min(parseInt(m[1],10),10) : 1;
+  for(i=0;i<n;i++) out.push({w:"",r:m?m[2]:""});
+  return out;
+}
+function logSets(k,sid,iid,sets){
+  var days=state.train.days, d=days[k]||(days[k]={}), s=d[sid]||(d[sid]={});
+  sets=sets.map(function(x){ return {w:String(x.w||"").trim(),r:String(x.r||"").trim()}; })
+    .filter(function(x){ return x.w||x.r; });
+  s[iid]= sets.length? {sets:sets} : 1;
+  listStamp("train");
 }
 function sessionCount(s,k){
   var t=ticksOn(k,s.id), n=0;
@@ -2543,7 +2588,7 @@ function trainSessions(pane,sub){
     b.appendChild(mk("span","dl",name.slice(0,3)));
     b.appendChild(mk("span","dn",String(dayDate(i).getDate())));
     var bar=mk("span","db"), bf=mk("i"); bf.style.width=(n?100:0)+"%"; bar.appendChild(bf); b.appendChild(bar);
-    b.addEventListener("click",function(){ trainDay=i; render(); });
+    b.addEventListener("click",function(){ trainDay=i; moveEditing=null; runEditing=null; render(); });
     strip.appendChild(b);
   });
   sub.textContent="Week of "+fmtDay(weekStart())+" · "+trained+" training day"+(trained===1?"":"s");
@@ -2592,6 +2637,8 @@ function trainSessions(pane,sub){
     card.appendChild(rows);
     pane.appendChild(card);
   });
+  /* a run goes on any day, session or not */
+  pane.appendChild(runCard(k));
 }
 function sessionCard(s,k){
   var ticks=ticksOn(k,s.id), card=mk("div","sec"), sh=mk("div","sec-head");
@@ -2611,7 +2658,17 @@ function sessionCard(s,k){
     var sub=[it.dose,it.cue].filter(Boolean).join(" · ");
     if(sub) tx.appendChild(mk("span","gsub",sub));
     if(it.alt) tx.appendChild(mk("span","gsub","Easier: "+it.alt));
+    var logged=setsOf(ticks[it.id]);
+    if(logged.length) tx.appendChild(mk("span","gsets",setsText(logged)));
     row.appendChild(tx);
+    /* weight and reps, set by set; the editor opens under the row */
+    var sb=mk("button","tlog",logged.length?"Edit":"Sets"); sb.type="button";
+    sb.setAttribute("aria-label",(logged.length?"Edit the sets for ":"Log sets for ")+it.name);
+    sb.addEventListener("click",function(e){
+      e.stopPropagation(); moveEditing = moveEditing===it.id ? null : it.id; render();
+      var ed=document.querySelector("#train .gedit"); if(ed) ed.scrollIntoView({block:"center"});
+    });
+    row.appendChild(sb);
     /* a move that is also a test gets a way to log it without leaving the session for long */
     var test=it.test&&findTest(it.test);
     if(test){
@@ -2626,9 +2683,124 @@ function sessionCard(s,k){
     row.addEventListener("click",flip);
     row.addEventListener("keydown",function(e){ if(e.target===row&&(e.key===" "||e.key==="Enter")){ e.preventDefault(); flip(); } });
     rows.appendChild(row);
+    if(moveEditing===it.id) rows.appendChild(setsEditor(s,it,k));
   });
   card.appendChild(rows);
   return card;
+}
+/* Weight and reps for one move on one day. Starts from what is logged, else from
+   the prescription ("3 × 8" gives three rows of 8), with last time's numbers as the
+   placeholders so "same as last time" is a glance. Saving ticks the move. */
+function setsEditor(s,it,k){
+  var box=mk("div","gedit"), pad=mk("div","dpad");
+  var have=setsOf(ticksOn(k,s.id)[it.id]), last=lastSets(s.id,it.id,k);
+  var sets=have.length? have.map(function(x){ return {w:x.w,r:x.r}; }) : setsFromDose(it.dose);
+  if(last) pad.appendChild(mk("p","hint","Last time ("+fmtDay(last.date)+"): "+setsText(last.sets)));
+  var list=mk("div","field");
+  list.appendChild(mk("label",null,"Weight \u00d7 reps"));
+  function draw(){
+    while(list.children.length>1) list.removeChild(list.lastChild);
+    sets.forEach(function(x,i){
+      var row=mk("div","setrow"), ph=last&&last.sets[i];
+      row.appendChild(mk("span","sn",String(i+1)));
+      var w=document.createElement("input"); w.value=x.w; w.placeholder=ph?ph.w||"kg":"kg"; w.inputMode="decimal";
+      w.setAttribute("aria-label","Set "+(i+1)+" weight"); w.addEventListener("input",function(){ x.w=w.value; });
+      var r=document.createElement("input"); r.value=x.r; r.placeholder=ph?ph.r||"reps":"reps"; r.inputMode="numeric";
+      r.setAttribute("aria-label","Set "+(i+1)+" reps"); r.addEventListener("input",function(){ x.r=r.value; });
+      var del=mk("button","mini del"); del.type="button"; del.innerHTML=ICON.trash; del.setAttribute("aria-label","Remove set "+(i+1));
+      del.disabled=sets.length<2;
+      del.addEventListener("click",function(){ sets.splice(i,1); draw(); });
+      row.appendChild(w); row.appendChild(mk("span","sx","\u00d7")); row.appendChild(r); row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+  draw();
+  pad.appendChild(list);
+  var add=mk("button","linkbtn","+ Add a set"); add.type="button"; add.style.alignSelf="flex-start";
+  add.addEventListener("click",function(){
+    var p=sets[sets.length-1]; sets.push({w:p?p.w:"",r:p?p.r:""}); draw();
+    var ins=list.querySelectorAll("input"); if(ins.length) ins[ins.length-2].focus();
+  });
+  pad.appendChild(add);
+  var row2=mk("div","row2");
+  row2.appendChild(mkBtn("Save sets","primary",function(){ logSets(k,s.id,it.id,sets); moveEditing=null; buzz(); render(); }));
+  if(have.length) row2.appendChild(mkBtn("Clear sets","ghost",function(){ logSets(k,s.id,it.id,[]); moveEditing=null; render(); }));
+  pad.appendChild(row2);
+  box.appendChild(pad);
+  return box;
+}
+/* Running on the selected day. Distance, time, speed and incline are kept as typed -
+   a treadmill shows whatever it shows - and any day can carry a run, session or not. */
+var RUN_FIELDS=[["dist","Distance","e.g. 5 km"],["time","Time","m:ss, e.g. 30:00"],["speed","Speed","e.g. 10 km/h"],["incline","Incline","e.g. 2%"]];
+function runText(r){
+  return RUN_FIELDS.map(function(f){ return r[f[0]]? (f[0]==="incline"?"incline ":f[0]==="speed"?"at ":"")+r[f[0]] : ""; })
+    .filter(Boolean).join(" \u00b7 ")||"Run";
+}
+function runCard(k){
+  var runs=runsOn(k), card=mk("div","sec"), sh=mk("div","sec-head");
+  sh.innerHTML=ICON.flag;
+  sh.appendChild(mk("span","sec-title","Running"));
+  sh.appendChild(mk("span","sec-count",runs.length? runs.length+" on "+fmtDay(k) : fmtDay(k)));
+  card.appendChild(sh);
+  var rows=mk("div","rows");
+  runs.forEach(function(r){
+    var row=mk("div","row gi static"), tx=mk("span","gtext");
+    tx.appendChild(mk("span","label",runText(r)));
+    if(r.note) tx.appendChild(mk("span","gsub",r.note));
+    row.appendChild(tx);
+    var eb=mk("button","tlog","Edit"); eb.type="button"; eb.setAttribute("aria-label","Edit this run");
+    eb.addEventListener("click",function(){ runEditing = runEditing===r.id ? null : r.id; render(); });
+    row.appendChild(eb);
+    rows.appendChild(row);
+    if(runEditing===r.id) rows.appendChild(runEditor(r,k));
+  });
+  if(runEditing==="new") rows.appendChild(runEditor(null,k));
+  else{
+    var ab=mk("button","row gi"); ab.type="button";
+    var at=mk("span","gtext"); at.appendChild(mk("span","label",runs.length?"Add another run":"Add a run"));
+    if(!runs.length){
+      var recent=state.train.runs.filter(function(r){ return r.date<k; }).sort(function(a,b){ return a.date<b.date?1:-1; })[0];
+      at.appendChild(mk("span","gsub",recent? "Last run "+fmtDay(recent.date)+": "+runText(recent) : "Distance, time, speed, incline"));
+    }
+    ab.appendChild(at);
+    var ch=mk("span","tchev"); ch.innerHTML=ICON.right; ab.appendChild(ch);
+    ab.addEventListener("click",function(){ runEditing="new"; render(); var ed=document.querySelector("#train .gedit input"); if(ed) ed.focus(); });
+    rows.appendChild(ab);
+  }
+  card.appendChild(rows);
+  return card;
+}
+function runEditor(r,k){
+  var box=mk("div","gedit"), pad=mk("div","dpad"), fs={};
+  var grid=mk("div","row2");
+  RUN_FIELDS.forEach(function(f){
+    var fl=field(f[1],r?r[f[0]]:"",f[2]); fl.style.flex="1 1 40%"; fs[f[0]]=fl.input;
+    if(f[0]!=="time") fl.input.inputMode="decimal";
+    grid.appendChild(fl);
+  });
+  pad.appendChild(grid);
+  var fn=field("Note",r?r.note:"","How it felt"); fn.input.autocapitalize="sentences"; pad.appendChild(fn);
+  var msg=mk("p","hint"); msg.hidden=true; pad.appendChild(msg);
+  var row2=mk("div","row2");
+  row2.appendChild(mkBtn(r?"Save run":"Log run","primary",function(){
+    var run=r||{id:uid(),date:k}, any=false;
+    RUN_FIELDS.forEach(function(f){ run[f[0]]=fs[f[0]].value.trim(); if(run[f[0]]) any=true; });
+    if(!any){ msg.textContent="Fill in at least one of distance, time, speed or incline."; msg.hidden=false; return; }
+    run.note=fn.input.value.trim();
+    if(!r) state.train.runs.push(run);
+    runEditing=null; listStamp("train"); buzz(); render();
+  }));
+  row2.appendChild(mkBtn(r?"Delete":"Cancel",r?"ghost danger":"ghost",function(){
+    if(r){
+      if(!confirm("Delete this run from "+fmtDay(k)+"?")) return;
+      state.train.runs=state.train.runs.filter(function(x){ return x!==r; });
+      listStamp("train");
+    }
+    runEditing=null; render();
+  }));
+  pad.appendChild(row2);
+  box.appendChild(pad);
+  return box;
 }
 
 function trainTests(pane,sub){
@@ -2807,7 +2979,7 @@ function renderTrain(){
   TRAIN_SEGS.forEach(function(o){
     var b=mk("button",trainSeg===o[0]?"on":null,o[1]); b.type="button";
     b.setAttribute("aria-pressed",trainSeg===o[0]?"true":"false");
-    b.addEventListener("click",function(){ trainSeg=o[0]; testEditing=null; render(); window.scrollTo(0,0); });
+    b.addEventListener("click",function(){ trainSeg=o[0]; testEditing=null; moveEditing=null; runEditing=null; render(); window.scrollTo(0,0); });
     seg.appendChild(b);
   });
   pane.appendChild(seg);
@@ -2864,7 +3036,7 @@ function importHabits(sections){
    Replaced entries keep their ids when a name comes back, so results stay attached.
    Returns one short line per thing changed, for the chips. */
 function importWorkouts(src,whole){
-  var w=state.train, n={tests:0,results:0,sessions:0,library:0,done:0}, prev={};
+  var w=state.train, n={tests:0,results:0,sessions:0,library:0,done:0,runs:0}, prev={};
   function str(v){ return String(v==null?"":v).trim(); }
   function nameOf(x){ return str(x.name!=null?x.name:x.title).toLowerCase(); }
   if(whole) ["tests","sessions","library"].forEach(function(k){
@@ -2927,12 +3099,42 @@ function importWorkouts(src,whole){
     var title=str(e.session).toLowerCase(), d=str(e.date)||day, sess=null;
     w.sessions.forEach(function(x){ if(x.title.toLowerCase()===title) sess=x; });
     if(!sess||!/^\d{4}-\d\d-\d\d$/.test(d)||d>day) return;
-    var names=Array.isArray(e.moves)? e.moves.map(function(m){ return str(m).toLowerCase(); }) : null;
-    var dd=w.days[d]||(w.days[d]={}), tk=dd[sess.id]||(dd[sess.id]={}), before=Object.keys(tk).length;
-    sess.items.forEach(function(it){ if(!names||names.indexOf(it.name.toLowerCase())>=0) tk[it.id]=1; });
+    /* a move is a name, or {name, sets:[{weight, reps}]} when the sets were said */
+    var names=null, sets={};
+    if(Array.isArray(e.moves)){
+      names=[];
+      e.moves.forEach(function(m){
+        var name=str(m&&typeof m==="object"?m.name:m).toLowerCase(); if(!name) return;
+        names.push(name);
+        if(m&&typeof m==="object"&&Array.isArray(m.sets)){
+          var ss=m.sets.map(function(x){
+            if(x&&typeof x==="object") return {w:str(x.w!=null?x.w:x.weight),r:str(x.r!=null?x.r:x.reps)};
+            var p=/^\s*([^x\u00d7]*?)\s*[x\u00d7]\s*(\d+)\s*$/i.exec(str(x));
+            return p? {w:p[1],r:p[2]} : {w:"",r:str(x)};
+          }).filter(function(x){ return x.w||x.r; });
+          if(ss.length) sets[name]=ss;
+        }
+      });
+    }
+    var dd=w.days[d]||(w.days[d]={}), tk=dd[sess.id]||(dd[sess.id]={}), before=JSON.stringify(tk);
+    sess.items.forEach(function(it){
+      var key=it.name.toLowerCase();
+      if(names&&names.indexOf(key)<0) return;
+      tk[it.id]= sets[key]? {sets:sets[key]} : (tk[it.id]||1);
+    });
     if(!Object.keys(tk).length) delete dd[sess.id];
     if(!Object.keys(dd).length) delete w.days[d];
-    if(Object.keys(tk).length>before) n.done++;
+    if(JSON.stringify(tk)!==before) n.done++;
+  });
+  /* runs match by day and what was said, so repeating one doesn't double it */
+  (src.runs||[]).forEach(function(r){
+    if(!r||typeof r!=="object") return;
+    var d=str(r.date)||day, run={id:uid(),date:d,note:str(r.note)}, any=false;
+    if(!/^\d{4}-\d\d-\d\d$/.test(d)||d>day) return;
+    RUN_FIELDS.forEach(function(f){ run[f[0]]=str(r[f[0]]!=null?r[f[0]]:f[0]==="dist"?r.distance:f[0]==="time"?r.duration:""); if(run[f[0]]) any=true; });
+    if(!any) return;
+    if(w.runs.some(function(x){ return x.date===d&&RUN_FIELDS.every(function(f){ return (x[f[0]]||"")===run[f[0]]; }); })) return;
+    w.runs.push(run); n.runs++;
   });
   var did=[];
   function count(k,one,many){ if(n[k]) did.push(n[k]+" "+(n[k]===1?one:many)); }
@@ -2941,6 +3143,7 @@ function importWorkouts(src,whole){
   count("sessions","session","sessions");
   count("library","exercise","exercises");
   count("done","session ticked","sessions ticked");
+  count("runs","run logged","runs logged");
   if(did.length) w.mtime=Date.now();
   return did;
 }
@@ -3012,10 +3215,22 @@ function askContext(){
   lines.push("Workout sessions this week:");
   WEEKDAYS.forEach(function(d,i){
     if(i>weekIdx()) return;
-    var k=keyOf(dayDate(i)), done=tr.sessions.filter(function(s){ return sessionCount(s,k); }).map(function(s){
-      return s.title+" ("+sessionCount(s,k)+"/"+s.items.length+" moves)";
+    var k=keyOf(dayDate(i)), tk=tr.days[k]||{}, done=tr.sessions.filter(function(s){ return sessionCount(s,k); }).map(function(s){
+      var moves=s.items.filter(function(it){ return tk[s.id]&&tk[s.id][it.id]; }).map(function(it){
+        var sets=setsOf(tk[s.id][it.id]); return it.name+(sets.length?" "+setsText(sets):"");
+      });
+      return s.title+" ("+sessionCount(s,k)+"/"+s.items.length+" moves: "+moves.join("; ")+")";
     });
+    runsOn(k).forEach(function(r){ done.push("Run "+runText(r)+(r.note?" ("+r.note+")":"")); });
     if(done.length) lines.push("- "+d+": "+done.join(", "));
+  });
+  var lastRun=tr.runs.slice().sort(function(a,b){ return a.date<b.date?1:-1; })[0];
+  if(lastRun) lines.push("Last run: "+lastRun.date+" "+runText(lastRun)+".");
+  lines.push("Sessions and their moves (last sets logged):");
+  tr.sessions.forEach(function(s){
+    lines.push("- "+s.title+": "+s.items.map(function(it){
+      var l=lastSets(s.id,it.id,"9999"); return it.name+(it.dose?" "+it.dose:"")+(l?" [last "+l.date+": "+setsText(l.sets)+"]":"");
+    }).join("; "));
   });
   lines.push("");
   lines.push("Fitness tests:");
@@ -3049,7 +3264,8 @@ function askRules(){
     '"groceries":[{"name":"Eggs","need":true,"qty":"2","store":"Costco","group":"Dairy","note":"large"}],'+
     '"habits":[{"title":"Morning","items":["Stretch"]}],'+
     '"workouts":{"results":[{"test":"Push-ups (max)","date":"'+day+'","result":"42","note":""}],'+
-    '"done":[{"session":"Full body","date":"'+day+'","moves":["Squat"]}],'+
+    '"done":[{"session":"Full body","date":"'+day+'","moves":[{"name":"Squat","sets":[{"weight":"60","reps":"8"},{"weight":"60","reps":"8"}]},"Rows"]}],'+
+    '"runs":[{"date":"'+day+'","dist":"5 km","time":"30:00","speed":"10 km/h","incline":"2%","note":""}],'+
     '"tests":[{"name":"Plank hold","group":"Strength","unit":"time","min":"","target":"2:00","better":"higher"}]},'+
     '"notes":["Ran into Sam at the gym"]}',
     "```",
@@ -3059,14 +3275,17 @@ function askRules(){
     "qty is how many to get, as a number in a string (\"6 oranges\" is name Oranges, qty 6); \"\" clears it. note is for brand or a code, not a count. "+
     "notes are appended to the scratch pad with today's date - use them for anything the person wants jotted down. "+
     "Workout results name a test exactly as listed below; times are m:ss or h:mm:ss, pass/fail tests take Pass or Fail, and the date defaults to today. "+
-    "done ticks a session's moves on a day - leave out moves to tick the whole session, and never use a future day. Add a test only when asked to track a new one. "+
+    "done ticks a session's moves on a day - leave out moves to tick the whole session, and never use a future day. A move is its name, or {name, sets} when the person says "+
+    "what they lifted: one entry per set with weight and reps as said (\"3 sets of 8 at 60\" is three sets of weight 60, reps 8; bodyweight is weight \"BW\"). "+
+    "runs log a run on a day with whichever of dist, time, speed and incline were said, as text with the units the person used; never invent the ones they didn't say. "+
+    "To add a new session, put it in sessions with its title, group and items (name and dose like \"3 × 10\"). Add a test only when asked to track a new one. "+
     "Never put the block in a reply to a plain question, and never invent changes the person did not ask for.",
     "Meal slots: "+state.meals.slots.join(", ")+".",
     "Meal options - "+opts.join("; ")+".",
     "Stores known: "+(stores.join(", ")||"none")+". Food groups known: "+(groups.join(", ")||"none")+".",
     "Habit sections: "+state.sections.map(function(x){ return x.title||"Untitled"; }).join(", ")+".",
     "Fitness tests - "+(state.train.tests.map(function(t){ return t.name+(t.unit?" ("+t.unit+")":""); }).join("; ")||"none")+".",
-    "Workout sessions - "+(state.train.sessions.map(function(x){ return x.title; }).join("; ")||"none")+"."
+    "Workout sessions - "+(state.train.sessions.map(function(x){ return x.title+" ("+x.items.map(function(it){ return it.name; }).join(", ")+")"; }).join("; ")||"none")+"."
   ].join("\n");
 }
 /* Split the block off a reply: {text, data}. data is null when there is none or it
