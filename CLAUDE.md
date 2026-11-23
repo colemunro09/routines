@@ -76,7 +76,8 @@ does not edit the standing questions.
   v: 3,
   quote: "…",        // your line; joins the daily rotation at the top of the list
   midQuote: "…",     // your line; joins the daily rotation between the first and second section
-  scratch: "…",      // standing dump pad — not tied to a day, not cleared at midnight
+  scratch: "…",      // standing dump pad — not tied to a day, not cleared at midnight;
+                     // a paste of 2+ lines lands as "• " bullets, one per line (bulletLines)
   sections: [ { id, icon: "sun"|"moon", title, items: [ { id, label } ] } ],
   log: {
     "2026-08-23": {

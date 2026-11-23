@@ -2059,6 +2059,16 @@ function fitNote(el){
   el.style.height="auto";
   el.style.height=Math.max(54, el.scrollHeight)+"px";
 }
+/* A paste of two or more lines lands as one bullet per line: blank lines go, and
+   any bullet or number the source already had is swapped for the pad's own.
+   A single line pastes as it is (null). */
+function bulletLines(text){
+  var lines=String(text).replace(/\r\n?/g,"\n").split("\n")
+    .map(function(x){ return x.replace(/^\s*(?:[-*+\u2022\u00b7\u2013\u2014\u25aa\u25e6]|\d{1,3}[.)])\s+/,"").trim(); })
+    .filter(Boolean);
+  if(lines.length<2) return null;
+  return lines.map(function(x){ return "\u2022 "+x; }).join("\n");
+}
 function renderDayNote(){
   var host=$("dayNote");
   if(editing){ host.hidden=true; return; }
@@ -2081,6 +2091,19 @@ function renderDayNote(){
   cb.className="copy"; cb.type="button"; cb.textContent="Copy";
   cb.addEventListener("click",function(){ copy(i,cb,"Copy"); });
   i.addEventListener("input",function(){ setScratch(i.value); fitNote(i); });
+  i.addEventListener("paste",function(e){
+    var t=e.clipboardData&&e.clipboardData.getData("text/plain");
+    var b=bulletLines(t||"");
+    if(b==null) return;
+    e.preventDefault();
+    var a=i.selectionStart, z=i.selectionEnd, v=i.value;
+    /* a list pasted mid-line starts on a line of its own */
+    if(a>0&&v.charAt(a-1)!=="\n") b="\n"+b;
+    if(z<v.length&&v.charAt(z)!=="\n") b+="\n";
+    i.value=v.slice(0,a)+b+v.slice(z);
+    i.selectionStart=i.selectionEnd=a+b.length;
+    setScratch(i.value); fitNote(i);
+  });
   head.appendChild(l); head.appendChild(cb);
   host.appendChild(head); host.appendChild(i);
   fitNote(i);
